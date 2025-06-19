@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signal Logs</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <h1>Signal Logs</h1>
+    <a href="/">Back to Dashboard</a>
+
+    <table id="logs-table">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Symbol</th>
+                <th>Signal</th>
+                <th>Change (15m)</th>
+                <th>Current Ratio</th>
+            </tr>
+        </thead>
+        <tbody id="logs-table-body">
+            <!-- Log data will be inserted here -->
+        </tbody>
+    </table>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tableBody = document.getElementById('logs-table-body');
+
+            fetch('/api/logs')
+                .then(response => response.json())
+                .then(logs => {
+                    logs.forEach(log => {
+                        const row = tableBody.insertRow();
+                        row.innerHTML = `
+                            <td>${new Date(log.timestamp).toLocaleString()}</td>
+                            <td>${log.symbol}</td>
+                            <td>${log.signal}</td>
+                            <td>${log.change}</td>
+                            <td>${log.currentRatio}</td>
+                        `;
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching logs:', error);
+                    tableBody.innerHTML = '<tr><td colspan="5">Could not load logs.</td></tr>';
+                });
+        });
+    </script>
+
+</body>
+</html>
