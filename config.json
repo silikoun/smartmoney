@@ -3,5 +3,7 @@
     "divergence_alert_threshold_bearish": -0.1,
     "divergence_ui_threshold_bullish": 0.05,
     "divergence_ui_threshold_bearish": -0.05,
-    "minimum_open_interest_usd": 15000000
+    "minimum_open_interest_usd": 15000000,
+    "blacklist_cooldown_hours": 1,
+    "alpha7_alert_threshold": 96
 }

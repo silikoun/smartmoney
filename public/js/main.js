@@ -2,7 +2,9 @@ const tableBody = document.getElementById('data-table-body');
 const socket = new WebSocket('ws://localhost:5017');
 const customizeBtn = document.getElementById('customize-btn');
 const customizePanel = document.getElementById('customize-panel');
+const customizeCheckboxes = document.getElementById('customize-checkboxes');
 const tableHeaders = document.getElementById('table-headers');
+const exportBtn = document.getElementById('export-btn');
 
 let tableData = [];
 let sortColumn = 'momentumIndex';
@@ -45,6 +47,11 @@ socket.onmessage = (event) => {
     } else {
         tableData.push(data);
     }
+
+    if (data.symbol === 'BTCUSDT' || data.symbol === 'ETHUSDT') {
+        updateMarketSentiment(data.symbol, data.alpha7Signal);
+    }
+
     renderTable();
 };
 
@@ -62,21 +69,23 @@ function setupColumnCustomization() {
         const columnKey = header.dataset.sort;
         if (columnKey) {
             // Default to visible if no setting is saved
-            visibleColumns[columnKey] = savedColumns ? savedColumns[columnKey] : true;
+            visibleColumns[columnKey] = savedColumns ? savedColumns[columnKey] !== false : true;
 
             const label = document.createElement('label');
+            label.className = 'flex items-center space-x-2 text-sm';
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.checked = visibleColumns[columnKey];
             checkbox.dataset.column = columnKey;
+            checkbox.className = 'form-checkbox h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500';
             
             label.appendChild(checkbox);
             label.appendChild(document.createTextNode(header.textContent.replace('↕', '').trim()));
-            customizePanel.appendChild(label);
+            customizeCheckboxes.appendChild(label);
         }
     });
 
-    customizePanel.addEventListener('change', (event) => {
+    customizeCheckboxes.addEventListener('change', (event) => {
         const checkbox = event.target;
         const columnKey = checkbox.dataset.column;
         visibleColumns[columnKey] = checkbox.checked;
@@ -118,27 +127,42 @@ function updateHeaderVisibility() {
 }
 
 function buildRowHTML(data) {
+    const cellClasses = 'px-4 py-3 text-xs whitespace-nowrap';
     const cells = {
-        divergenceVector24h: () => formatDivergenceVectorCell(data.divergenceVector24h),
-        topTraderTrend24h: () => formatTrendCell(data.topTraderTrend24h),
-        momentumIndex: () => `<td><div class="momentum-index" style="background-color: ${getMomentumColor(data.momentumIndex)};">${data.momentumIndex}</div></td>`,
-        alphaDivergenceScore15m: () => formatDivergenceCell(data.alphaDivergenceScore15m),
-        divergenceVector4h: () => formatDivergenceVectorCell(data.divergenceVector4h),
-        divergenceVector5m: () => formatDivergenceVectorCell(data.divergenceVector5m),
-        oiConvictionScore: () => formatConvictionCell(data.oiConvictionScore),
-        signalStrength: () => `<td><div class="signal-strength ${getSignalClass(data.signalStrength)}">${data.signalStrength}</div></td>`,
-        symbol: () => `<td class="symbol">${data.symbol}</td>`,
-        lsTopPositionRatio: () => `<td>${data.lsTopPositionRatio}</td>`,
-        lsTopPositionRatioChange1m: () => formatChangeCell(data.lsTopPositionRatioChange1m),
-        lsTopPositionRatioChange15m: () => formatChangeCell(data.lsTopPositionRatioChange15m),
-        openInterestChange1m: () => formatChangeCell(data.openInterestChange1m),
-        openInterestChange5m: () => formatChangeCell(data.openInterestChange5m),
-        openInterestChange15m: () => formatChangeCell(data.openInterestChange15m),
-        timestamp: () => `<td>${data.timestamp}</td>`
+        divergenceVector24h: () => `<td class="${cellClasses}">${formatDivergenceVectorCell(data.divergenceVector24h)}</td>`,
+        topTraderTrend24h: () => `<td class="${cellClasses} text-center">${formatTrendCell(data.topTraderTrend24h)}</td>`,
+        momentumIndex: () => `<td class="${cellClasses}"><div class="w-12 text-center px-2 py-0.5 text-xs font-bold text-white rounded" style="background-color: ${getMomentumColor(data.momentumIndex)};">${data.momentumIndex}</div></td>`,
+        alphaDivergenceScore15m: () => `<td class="${cellClasses} font-bold">${formatDivergenceCell(data.alphaDivergenceScore15m)}</td>`,
+        divergenceVector4h: () => `<td class="${cellClasses}">${formatDivergenceVectorCell(data.divergenceVector4h)}</td>`,
+        divergenceVector1h: () => `<td class="${cellClasses}">${formatDivergenceVectorCell(data.divergenceVector1h)}</td>`,
+        divergenceVector15m: () => `<td class="${cellClasses}">${formatDivergenceVectorCell(data.divergenceVector15m)}</td>`,
+        divergenceVector5m: () => `<td class="${cellClasses}">${formatDivergenceVectorCell(data.divergenceVector5m)}</td>`,
+        oiConvictionScore: () => `<td class="${cellClasses} font-bold text-center">${formatConvictionCell(data.oiConvictionScore)}</td>`,
+        lsConvictionScore: () => `<td class="${cellClasses} font-bold text-center">${formatConvictionCell(data.lsConvictionScore)}</td>`,
+        divVectorConvictionScore: () => `<td class="${cellClasses} font-bold text-center">${formatConvictionCell(data.divVectorConvictionScore)}</td>`,
+        alpha7Signal: () => `<td class="${cellClasses} font-bold text-center">${formatAlpha7Signal(data.alpha7Signal)}</td>`,
+        signalStrength: () => `<td class="${cellClasses}"><div class="text-center px-2 py-0.5 text-xs font-bold rounded ${getSignalClass(data.signalStrength)}">${data.signalStrength}</div></td>`,
+        symbol: () => `<td class="${cellClasses} font-bold text-blue-600">${data.symbol}</td>`,
+        lsTopPositionRatio: () => `<td class="${cellClasses} text-gray-500">${data.lsTopPositionRatio}</td>`,
+        lsTopPositionRatioChange1m: () => `<td class="${cellClasses}">${formatChangeCell(data.lsTopPositionRatioChange1m)}</td>`,
+        lsTopPositionRatioChange15m: () => `<td class="${cellClasses}">${formatChangeCell(data.lsTopPositionRatioChange15m)}</td>`,
+        lsTopPositionRatioChange30m: () => `<td class="${cellClasses}">${formatChangeCell(data.lsTopPositionRatioChange30m)}</td>`,
+        lsTopPositionRatioChange1h: () => `<td class="${cellClasses}">${formatChangeCell(data.lsTopPositionRatioChange1h)}</td>`,
+        lsTopPositionRatioChange4h: () => `<td class="${cellClasses}">${formatChangeCell(data.lsTopPositionRatioChange4h)}</td>`,
+        openInterestChange1m: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestChange1m)}</td>`,
+        openInterestChange5m: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestChange5m)}</td>`,
+        openInterestChange15m: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestChange15m)}</td>`,
+        openInterestChange1h: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestChange1h)}</td>`,
+        openInterestChange4h: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestChange4h)}</td>`,
+        openInterestChange12h: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestChange12h)}</td>`,
+        openInterestChange24h: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestChange24h)}</td>`,
+        timestamp: () => `<td class="${cellClasses} text-gray-400">${data.timestamp}</td>`
     };
 
     let html = '';
-    Object.keys(visibleColumns).forEach(key => {
+    const headers = Array.from(tableHeaders.children);
+    headers.forEach(header => {
+        const key = header.dataset.sort;
         if (visibleColumns[key] && cells[key]) {
             html += cells[key]();
         }
@@ -149,10 +173,10 @@ function buildRowHTML(data) {
 // --- Cell Formatting ---
 
 const formatChangeCell = (change) => {
-    if (change === 'N/A') return `<td>${change}</td>`;
+    if (change === 'N/A') return `<span class="text-gray-400">${change}</span>`;
     const changeValue = parseFloat(change);
-    const changeClass = changeValue > 0 ? 'positive' : 'negative';
-    return `<td class="${changeClass}">${change}</td>`;
+    const colorClass = changeValue > 0 ? 'text-green-600' : 'text-red-600';
+    return `<span class="${colorClass}">${change}</span>`;
 };
 
 const getMomentumColor = (score) => {
@@ -161,39 +185,85 @@ const getMomentumColor = (score) => {
 };
 
 const getSignalClass = (signal) => {
-    if (typeof signal !== 'string') return 'neutral';
-    return signal.toLowerCase().replace(' ', '-');
+    if (typeof signal !== 'string') return 'bg-gray-200 text-gray-800';
+    switch (signal.toLowerCase()) {
+        case 'strong buy': return 'bg-green-500 text-white';
+        case 'weak buy': return 'bg-green-200 text-green-800';
+        case 'strong sell': return 'bg-red-500 text-white';
+        case 'weak sell': return 'bg-red-200 text-red-800';
+        default: return 'bg-gray-200 text-gray-800';
+    }
 };
 
 const formatDivergenceCell = (score) => {
-    if (score === 'N/A') return `<td>${score}</td>`;
+    if (score === 'N/A') return `<span class="text-gray-400">${score}</span>`;
     const scoreValue = parseFloat(score);
-    let color = 'white';
-    if (scoreValue > config.divergence_ui_threshold_bullish) color = '#26a69a';
-    else if (scoreValue < config.divergence_ui_threshold_bearish) color = '#ef5350';
-    return `<td style="color: ${color}; font-weight: bold;">${score}</td>`;
+    let colorClass = 'text-gray-800';
+    if (scoreValue > config.divergence_ui_threshold_bullish) colorClass = 'text-green-600';
+    else if (scoreValue < config.divergence_ui_threshold_bearish) colorClass = 'text-red-600';
+    return `<span class="${colorClass}">${score}</span>`;
 };
 
 const formatConvictionCell = (score) => {
-    if (score === undefined || score === null) return `<td>N/A</td>`;
+    if (score === undefined || score === null) return `<span class="text-gray-400">N/A</span>`;
     const scoreValue = parseInt(score, 10);
-    const red = scoreValue < 0 ? Math.round(Math.abs(scoreValue) / 10 * 200) : 0;
-    const green = scoreValue > 0 ? Math.round(scoreValue / 10 * 200) : 0;
-    return `<td style="color: rgb(${red}, ${green}, 0); font-weight: bold;">${scoreValue}</td>`;
+    let colorClass = 'text-gray-800';
+    if (scoreValue > 0) {
+        colorClass = `text-green-${Math.min(9, 4 + Math.floor(scoreValue / 20))}00`;
+    } else if (scoreValue < 0) {
+        colorClass = `text-red-${Math.min(9, 4 + Math.floor(Math.abs(scoreValue) / 20))}00`;
+    }
+    return `<span class="${colorClass}">${scoreValue}</span>`;
 };
 
 const formatDivergenceVectorCell = (score) => {
-    if (score === 'N/A') return `<td>${score}</td>`;
+    if (score === 'N/A') return `<span class="text-gray-400">${score}</span>`;
     const scoreValue = parseFloat(score);
-    const color = scoreValue > 0 ? '#26a69a' : '#ef5350';
-    return `<td style="color: ${color};">${score}</td>`;
+    const colorClass = scoreValue > 0 ? 'text-green-600' : 'text-red-600';
+    return `<span class="${colorClass}">${score}</span>`;
 };
 
 const formatTrendCell = (trend) => {
-    if (trend === 'Uptrend') return `<td><span class="positive" style="font-size: 1.5em;">&#x2197;</span></td>`;
-    if (trend === 'Downtrend') return `<td><span class="negative" style="font-size: 1.5em;">&#x2198;</span></td>`;
-    return `<td>&ndash;</td>`;
+    if (trend === 'Uptrend') return `<span class="text-green-600 text-xl">&#x2197;</span>`;
+    if (trend === 'Downtrend') return `<span class="text-red-600 text-xl">&#x2198;</span>`;
+    return `<span class="text-gray-400">&ndash;</span>`;
 };
+
+const formatAlpha7Signal = (score) => {
+    if (score === undefined || score === null) return `<span class="text-gray-400">N/A</span>`;
+    const scoreValue = parseInt(score, 10);
+    let bgColor = 'bg-gray-200';
+    let textColor = 'text-gray-800';
+    if (scoreValue > 50) {
+        bgColor = 'bg-green-500';
+        textColor = 'text-white';
+    } else if (scoreValue < -50) {
+        bgColor = 'bg-red-500';
+        textColor = 'text-white';
+    }
+    return `<div class="px-3 py-1 text-xs font-bold rounded ${bgColor} ${textColor}">${scoreValue}</div>`;
+};
+
+function updateMarketSentiment(symbol, score) {
+    const sentimentId = symbol === 'BTCUSDT' ? 'sentiment-btc' : 'sentiment-eth';
+    const sentimentElement = document.getElementById(sentimentId);
+    if (!sentimentElement) return;
+
+    const scoreValue = parseInt(score, 10);
+    let sentimentText = 'Neutral';
+    let sentimentColor = 'text-gray-500';
+
+    if (scoreValue > 50) {
+        sentimentText = 'Bullish';
+        sentimentColor = 'text-green-500';
+    } else if (scoreValue < -50) {
+        sentimentText = 'Bearish';
+        sentimentColor = 'text-red-500';
+    }
+
+    sentimentElement.querySelector('span:last-child').textContent = sentimentText;
+    sentimentElement.querySelector('span:last-child').className = `font-bold ${sentimentColor}`;
+}
 
 // --- Sorting ---
 
@@ -237,6 +307,40 @@ document.getElementById('table-headers').addEventListener('click', (event) => {
         renderTable();
     }
 });
+
+// --- CSV Export ---
+
+function exportTableToCSV() {
+    const headers = Array.from(tableHeaders.children)
+        .filter(header => visibleColumns[header.dataset.sort])
+        .map(header => `"${header.textContent.replace('↕', '').trim()}"`)
+        .join(',');
+
+    const rows = tableData.map(data => {
+        return Array.from(tableHeaders.children)
+            .filter(header => visibleColumns[header.dataset.sort])
+            .map(header => {
+                const key = header.dataset.sort;
+                return `"${data[key] || ''}"`;
+            })
+            .join(',');
+    });
+
+    const csvContent = [headers, ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    const timestamp = new Date().toISOString().replace(/:/g, '-');
+    link.setAttribute('download', `market_data_${timestamp}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+exportBtn.addEventListener('click', exportTableToCSV);
+
 
 // --- Initial Load ---
 initialize();
