@@ -4,7 +4,8 @@
   "description": "A Node.js application to display Binance Futures data.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "concurrently \"node server.js\" \"node indicators-server.js\""
   },
   "keywords": [
     "binance",
@@ -16,7 +17,9 @@
   "license": "ISC",
   "dependencies": {
     "axios": "^0.21.1",
+    "concurrently": "^9.2.0",
     "express": "^4.17.1",
+    "node-binance-api": "^1.0.10",
     "sak": "file:../sak",
     "winston": "^3.17.0",
     "ws": "^8.2.3"

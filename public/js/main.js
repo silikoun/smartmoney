@@ -5,8 +5,11 @@ const customizePanel = document.getElementById('customize-panel');
 const customizeCheckboxes = document.getElementById('customize-checkboxes');
 const tableHeaders = document.getElementById('table-headers');
 const exportBtn = document.getElementById('export-btn');
+const searchCoinBtn = document.getElementById('search-coin-btn');
+const searchCoinInput = document.getElementById('search-coin-input');
 
 let tableData = [];
+let allData = [];
 let sortColumn = 'momentumIndex';
 let sortDirection = 'desc';
 let config = {
@@ -25,6 +28,12 @@ function initialize() {
         })
         .catch(error => console.error('Error fetching config:', error));
 
+    const cachedData = sessionStorage.getItem('mainTableData');
+    if (cachedData) {
+        allData = JSON.parse(cachedData);
+        tableData = [...allData];
+    }
+
     setupColumnCustomization();
     renderTable(); // Initial render
 }
@@ -41,11 +50,21 @@ socket.onmessage = (event) => {
         console.error('Server error:', data.error);
         return;
     }
-    const existingIndex = tableData.findIndex(item => item.symbol === data.symbol);
+    const existingIndex = allData.findIndex(item => item.symbol === data.symbol);
     if (existingIndex > -1) {
-        tableData[existingIndex] = data;
+        allData[existingIndex] = data;
     } else {
-        tableData.push(data);
+        allData.push(data);
+    }
+
+    sessionStorage.setItem('mainTableData', JSON.stringify(allData));
+
+    // Preserve search filter if active
+    const searchTerm = searchCoinInput.value.trim().toUpperCase();
+    if (searchTerm) {
+        tableData = allData.filter(item => item.symbol.toUpperCase().includes(searchTerm));
+    } else {
+        tableData = [...allData];
     }
 
     if (data.symbol === 'BTCUSDT' || data.symbol === 'ETHUSDT') {
@@ -141,10 +160,13 @@ function buildRowHTML(data) {
         lsConvictionScore: () => `<td class="${cellClasses} font-bold text-center">${formatConvictionCell(data.lsConvictionScore)}</td>`,
         divVectorConvictionScore: () => `<td class="${cellClasses} font-bold text-center">${formatConvictionCell(data.divVectorConvictionScore)}</td>`,
         alpha7Signal: () => `<td class="${cellClasses} font-bold text-center">${formatAlpha7Signal(data.alpha7Signal)}</td>`,
+        vwapDeviation15m: () => `<td class="${cellClasses} font-bold">${formatVwapDeviationCell(data.vwapDeviation15m)}</td>`,
+        vwapDeviation4h: () => `<td class="${cellClasses} font-bold">${formatVwapDeviationCell(data.vwapDeviation4h)}</td>`,
+        vwapDeviation1d: () => `<td class="${cellClasses} font-bold">${formatVwapDeviationCell(data.vwapDeviation1d)}</td>`,
         signalStrength: () => `<td class="${cellClasses}"><div class="text-center px-2 py-0.5 text-xs font-bold rounded ${getSignalClass(data.signalStrength)}">${data.signalStrength}</div></td>`,
         symbol: () => `<td class="${cellClasses} font-bold text-blue-600">${data.symbol}</td>`,
         lsTopPositionRatio: () => `<td class="${cellClasses} text-gray-500">${data.lsTopPositionRatio}</td>`,
-        lsTopPositionRatioChange1m: () => `<td class="${cellClasses}">${formatChangeCell(data.lsTopPositionRatioChange1m)}</td>`,
+        lsTopPositionRatioChange5m: () => `<td class="${cellClasses}">${formatChangeCell(data.lsTopPositionRatioChange5m)}</td>`,
         lsTopPositionRatioChange15m: () => `<td class="${cellClasses}">${formatChangeCell(data.lsTopPositionRatioChange15m)}</td>`,
         lsTopPositionRatioChange30m: () => `<td class="${cellClasses}">${formatChangeCell(data.lsTopPositionRatioChange30m)}</td>`,
         lsTopPositionRatioChange1h: () => `<td class="${cellClasses}">${formatChangeCell(data.lsTopPositionRatioChange1h)}</td>`,
@@ -227,6 +249,17 @@ const formatTrendCell = (trend) => {
     if (trend === 'Uptrend') return `<span class="text-green-600 text-xl">&#x2197;</span>`;
     if (trend === 'Downtrend') return `<span class="text-red-600 text-xl">&#x2198;</span>`;
     return `<span class="text-gray-400">&ndash;</span>`;
+};
+
+const formatVwapDeviationCell = (deviation) => {
+    const deviationValue = parseFloat(deviation);
+    let colorClass = 'text-gray-800';
+    if (deviationValue > 5) {
+        colorClass = 'text-red-600'; // Overbought
+    } else if (deviationValue < -5) {
+        colorClass = 'text-green-600'; // Oversold
+    }
+    return `<span class="${colorClass}">${deviation}</span>`;
 };
 
 const formatAlpha7Signal = (score) => {
@@ -340,6 +373,23 @@ function exportTableToCSV() {
 }
 
 exportBtn.addEventListener('click', exportTableToCSV);
+
+function filterByCoin() {
+    const searchTerm = searchCoinInput.value.trim().toUpperCase();
+    if (searchTerm) {
+        tableData = allData.filter(item => item.symbol.toUpperCase().includes(searchTerm));
+    } else {
+        tableData = [...allData];
+    }
+    renderTable();
+}
+
+searchCoinBtn.addEventListener('click', filterByCoin);
+searchCoinInput.addEventListener('keyup', (event) => {
+    if (event.key === 'Enter') {
+        filterByCoin();
+    }
+});
 
 
 // --- Initial Load ---

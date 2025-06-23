@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paper Trading Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #FFFFFF;
+            color: #131722;
+        }
+    </style>
+</head>
+<body class="font-sans">
+
+    <div class="w-full p-4">
+        <header class="flex justify-between items-center mb-4">
+            <h1 class="text-2xl font-semibold text-gray-800">Paper Trading Dashboard</h1>
+            <a href="/" class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-500 transition">Back to Main Dashboard</a>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div class="bg-gray-100 p-4 rounded-lg">
+                <h2 class="text-sm font-medium text-gray-500">Portfolio Balance</h2>
+                <p id="portfolio-balance" class="text-2xl font-bold">$10,000.00</p>
+            </div>
+            <div class="bg-gray-100 p-4 rounded-lg">
+                <h2 class="text-sm font-medium text-gray-500">Open Positions</h2>
+                <p id="open-positions-count" class="text-2xl font-bold">0</p>
+            </div>
+            <div class="bg-gray-100 p-4 rounded-lg">
+                <h2 class="text-sm font-medium text-gray-500">Total P&L</h2>
+                <p id="total-pnl" class="text-2xl font-bold">$0.00</p>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <h2 class="text-xl font-semibold text-gray-800 mb-2">Place Order</h2>
+            <form id="place-order-form" class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+                <input type="text" id="symbol" placeholder="Symbol" class="p-2 border border-gray-300 rounded">
+                <select id="side" class="p-2 border border-gray-300 rounded">
+                    <option value="buy">Buy</option>
+                    <option value="sell">Sell</option>
+                </select>
+                <input type="text" id="price" placeholder="Price" class="p-2 border border-gray-300 rounded">
+                <input type="text" id="size" placeholder="Size" class="p-2 border border-gray-300 rounded">
+                <button type="submit" class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-500 transition">Place Order</button>
+            </form>
+        </div>
+
+    </div>
+
+    <script src="js/paper-trading.js"></script>
+</body>
+</html>

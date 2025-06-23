@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moving Average Indicators</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #FFFFFF;
+            color: #131722;
+        }
+    </style>
+</head>
+<body class="font-sans">
+
+    <div class="w-full p-4">
+        <header class="flex justify-between items-center mb-4">
+            <h1 class="text-2xl font-semibold text-gray-800">Moving Average Indicators</h1>
+            <a href="/" class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-500 transition">Back to Main Table</a>
+        </header>
+
+        <div class="flex items-center mb-4">
+            <input type="text" id="search-coin-input" placeholder="Search coin..." class="px-3 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button id="search-coin-btn" class="ml-2 px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-500 transition">Search</button>
+        </div>
+
+        <div class="overflow-x-auto border border-gray-200">
+            <table class="min-w-full">
+                <thead class="bg-gray-50">
+                    <tr class="text-xs text-left text-gray-500 uppercase">
+                        <th class="px-4 py-3">Coin</th>
+                        <th class="px-4 py-3">MA (15m)</th>
+                        <th class="px-4 py-3">MA (1h)</th>
+                        <th class="px-4 py-3">MA (4h)</th>
+                    </tr>
+                </thead>
+                <tbody id="indicators-table-body" class="divide-y divide-gray-200">
+                    <!-- Indicator rows will be inserted here by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="js/indicators.js"></script>
+</body>
+</html>

@@ -5,5 +5,8 @@
     "divergence_ui_threshold_bearish": -0.05,
     "minimum_open_interest_usd": 15000000,
     "blacklist_cooldown_hours": 1,
-    "alpha7_alert_threshold": 96
+    "alpha7_alert_threshold": 96,
+    "bitget_api_key": "bg_6540f95ef4b84c19d542c96c013fac85",
+    "bitget_secret_key": "9f9708b3ea1dcf7dfae952a0408bacec2f19925df09689db39836fba32ef3075",
+    "bitget_passphrase": ""
 }
