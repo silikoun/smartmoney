@@ -50,6 +50,12 @@ socket.onmessage = (event) => {
         console.error('Server error:', data.error);
         return;
     }
+
+    if (data.symbol === 'alpha7Signal') {
+        updateMarketSentiment('alpha7', data.alpha7Signal);
+        return; // Do not process this message further
+    }
+
     const existingIndex = allData.findIndex(item => item.symbol === data.symbol);
     if (existingIndex > -1) {
         allData[existingIndex] = data;
@@ -178,6 +184,9 @@ function buildRowHTML(data) {
         openInterestChange4h: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestChange4h)}</td>`,
         openInterestChange12h: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestChange12h)}</td>`,
         openInterestChange24h: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestChange24h)}</td>`,
+        relativeStrength24h: () => `<td class="${cellClasses} text-gray-500">${data.relativeStrength24h}</td>`,
+        relativeStrength4h: () => `<td class="${cellClasses} text-gray-500">${data.relativeStrength4h}</td>`,
+        relativeStrength1h: () => `<td class="${cellClasses} text-gray-500">${data.relativeStrength1h}</td>`,
         timestamp: () => `<td class="${cellClasses} text-gray-400">${data.timestamp}</td>`
     };
 
@@ -278,7 +287,7 @@ const formatAlpha7Signal = (score) => {
 };
 
 function updateMarketSentiment(symbol, score) {
-    const sentimentId = symbol === 'BTCUSDT' ? 'sentiment-btc' : 'sentiment-eth';
+    const sentimentId = symbol === 'BTCUSDT' ? 'sentiment-btc' : (symbol === 'ETHUSDT' ? 'sentiment-eth' : 'sentiment-alpha7');
     const sentimentElement = document.getElementById(sentimentId);
     if (!sentimentElement) return;
 

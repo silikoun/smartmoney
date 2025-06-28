@@ -79,6 +79,9 @@ const getBinanceData = async (symbol, endpoint, params = {}) => {
             console.warn(`Request for ${symbol} on ${endpoint} timed out. Will retry next cycle.`);
         } else if (error.code === 'ECONNRESET' || error.code === 'EAI_AGAIN') {
             console.warn(`Socket issue for ${symbol} on ${endpoint}. Will retry next cycle.`);
+        } else if (error.response && error.response.status === 418) {
+            console.warn(`IP address has been blocked by Binance API. Pausing requests for ${config.ip_blacklist_cooldown_minutes || 10} minutes.`);
+            // Implement a mechanism to pause all requests for a while
         } else {
             console.error(`Unhandled error for ${symbol} on ${endpoint}: ${error.message}`);
         }
@@ -93,6 +96,7 @@ const marketSentiment = {
     BTCUSDT: 'Neutral',
     ETHUSDT: 'Neutral'
 };
+let whaleSentiment = 'Neutral';
 const TELEGRAM_BOT_TOKEN = '7730946498:AAF5ZkwptplIgUmO1UwSHM2eQ-TXfo-lxQg';
 const TELEGRAM_CHAT_ID = '1218558676';
 
@@ -109,7 +113,7 @@ async function sendTelegramMessage(message) {
     }
 }
 
-async function sendAlpha7Alert(symbol, score) {
+async function sendAlpha7Alert(symbol, score, oiConviction) {
     const threshold = config.alpha7_alert_threshold || 75;
     let signal = '';
 
@@ -125,7 +129,8 @@ async function sendAlpha7Alert(symbol, score) {
         if (!alertCooldowns[symbol] || (now - alertCooldowns[symbol] > cooldown)) {
             const btcSentiment = `BTC: ${marketSentiment.BTCUSDT}`;
             const ethSentiment = `ETH: ${marketSentiment.ETHUSDT}`;
-            const message = `*${signal}*\n\n*Coin:* ${symbol}\n*Alpha-7 Score:* ${score}\n\n*Market Context:*\n${btcSentiment}\n${ethSentiment}`;
+            const whaleSent = `Whale: ${whaleSentiment}`;
+            const message = `*${signal}*\n\n*Coin:* ${symbol}\n*Alpha-7 Score:* ${score}\n*OI Conviction:* ${oiConviction}\n\n*Market Context:*\n${btcSentiment}\n${ethSentiment}\n${whaleSent}`;
             await sendTelegramMessage(message);
             alertCooldowns[symbol] = now;
         }
@@ -166,6 +171,15 @@ wss.on('connection', (ws) => {
                     console.error(`Failed to process symbol ${symbol}:`, error);
                 }
                 await new Promise(res => setTimeout(res, delay));
+            }
+
+            calculateWhaleSentiment(symbols);
+
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    symbol: 'alpha7Signal',
+                    alpha7Signal: whaleSentiment === 'Bullish' ? 100 : (whaleSentiment === 'Bearish' ? -100 : 0)
+                }));
             }
         } finally {
             isProcessing = false;
@@ -229,6 +243,9 @@ const fetchAllDataForSymbol = async (symbol) => {
     const klines_endpoint = 'https://fapi.binance.com/fapi/v1/klines';
 
     const [
+        btc_klines_24h,
+        btc_klines_4h,
+        btc_klines_1h,
         open_interest_data,
         price_data,
         oi_hist_data_1h,
@@ -245,9 +262,13 @@ const fetchAllDataForSymbol = async (symbol) => {
         ls_top_position_data_15m_for_divergence,
         ls_global_position_data_15m_for_divergence,
         klines_data_15m,
+        klines_data_1h,
         klines_data_4h,
         klines_data_1d
     ] = await Promise.all([
+        getBinanceData('BTCUSDT', klines_endpoint, { interval: '1d', limit: 2 }),
+        getBinanceData('BTCUSDT', klines_endpoint, { interval: '4h', limit: 2 }),
+        getBinanceData('BTCUSDT', klines_endpoint, { interval: '1h', limit: 2 }),
         getBinanceData(symbol, open_interest_endpoint),
         getBinanceData(symbol, price_endpoint),
         getBinanceData(symbol, oi_hist_endpoint, { period: '1h', limit: 25 }),
@@ -264,6 +285,7 @@ const fetchAllDataForSymbol = async (symbol) => {
         getBinanceData(symbol, ls_top_position_endpoint, { period: '5m', limit: 3 }),
         getBinanceData(symbol, ls_global_position_endpoint, { period: '5m', limit: 3 }),
         getBinanceData(symbol, klines_endpoint, { interval: '15m', limit: 96 }),
+        getBinanceData(symbol, klines_endpoint, { interval: '1h', limit: 96 }),
         getBinanceData(symbol, klines_endpoint, { interval: '4h', limit: 96 }),
         getBinanceData(symbol, klines_endpoint, { interval: '1d', limit: 96 })
     ]);
@@ -350,7 +372,12 @@ const fetchAllDataForSymbol = async (symbol) => {
     });
 
     // --- Alpha-7 Signal Calculation ---
-    const alpha7Signal = calculateAlpha7Signal(lsConvictionScore, divVectorConvictionScore);
+    const alpha7Signal = calculateAlpha7Signal(lsConvictionScore, divVectorConvictionScore, {
+        lsTopPositionRatioChange15m: lsTopPositionRatioChange15mFrom5m,
+        lsTopPositionRatioChange30m,
+        lsTopPositionRatioChange1h,
+        lsTopPositionRatioChange4h
+    });
 
     // --- VWAP Calculation ---
     const vwap15m = calculateVwap(klines_data_15m);
@@ -359,6 +386,11 @@ const fetchAllDataForSymbol = async (symbol) => {
     const vwapDeviation15m = vwap15m > 0 ? ((price - vwap15m) / vwap15m) * 100 : 0;
     const vwapDeviation4h = vwap4h > 0 ? ((price - vwap4h) / vwap4h) * 100 : 0;
     const vwapDeviation1d = vwap1d > 0 ? ((price - vwap1d) / vwap1d) * 100 : 0;
+
+    // --- Relative Strength Calculation ---
+    const relativeStrength24h = calculateRelativeStrength(klines_data_1d, btc_klines_24h);
+    const relativeStrength4h = calculateRelativeStrength(klines_data_4h, btc_klines_4h);
+    const relativeStrength1h = calculateRelativeStrength(klines_data_1h, btc_klines_1h);
 
     // --- Paper Trading ---
     paperTrader.checkTrades(symbol, price);
@@ -376,7 +408,7 @@ const fetchAllDataForSymbol = async (symbol) => {
         marketSentiment[symbol] = sentiment;
     }
 
-    sendAlpha7Alert(symbol, alpha7Signal);
+    sendAlpha7Alert(symbol, alpha7Signal, oiConvictionScore);
 
     // --- Signal Strength Calculation ---
     const signalStrength = calculateSignalStrength(symbol, lsTopPositionRatioChange15mFrom5m, currentLsTopPositionRatio);
@@ -412,7 +444,10 @@ const fetchAllDataForSymbol = async (symbol) => {
         openInterestChange1h: (openInterestChange1h / 1000000).toFixed(2) + 'M',
         openInterestChange4h: (openInterestChange4h / 1000000).toFixed(2) + 'M',
         openInterestChange12h: (openInterestChange12h / 1000000).toFixed(2) + 'M',
-        openInterestChange24h: (openInterestChange24h / 1000000).toFixed(2) + 'M'
+        openInterestChange24h: (openInterestChange24h / 1000000).toFixed(2) + 'M',
+        relativeStrength24h: relativeStrength24h ? relativeStrength24h.toFixed(2) : 'N/A',
+        relativeStrength4h: relativeStrength4h ? relativeStrength4h.toFixed(2) : 'N/A',
+        relativeStrength1h: relativeStrength1h ? relativeStrength1h.toFixed(2) : 'N/A'
     };
 
     previousData[symbol] = {
@@ -444,11 +479,37 @@ function calculate24hTrend(data24h) {
     }
 }
 
-function calculateAlpha7Signal(lsConviction, divConviction) {
+function calculateAlpha7Signal(lsConviction, divConviction, lsChanges) {
     if (lsConviction === undefined || divConviction === undefined) return 0;
-    
-    // 60% weight on Divergence Conviction, 40% on L/S Conviction
-    const weightedScore = (divConviction * 0.6) + (lsConviction * 0.4);
+
+    const weights = {
+        lsTopPositionRatioChange4h: 0.4,
+        lsTopPositionRatioChange1h: 0.3,
+        lsTopPositionRatioChange30m: 0.2,
+        lsTopPositionRatioChange15m: 0.1,
+    };
+
+    let score = 0;
+    let totalWeight = 0;
+
+    for (const key in weights) {
+        const value = parseFloat(lsChanges[key]);
+        if (isNaN(value)) continue;
+
+        totalWeight += weights[key];
+        if (value > 0) {
+            score += weights[key];
+        } else if (value < 0) {
+            score -= weights[key];
+        }
+    }
+
+    if (totalWeight === 0) return 0;
+
+    const lsScore = (score / totalWeight) * 100;
+
+    // 35% weight on Divergence Conviction, 65% on L/S Conviction
+    const weightedScore = (divConviction * 0.35) + (lsScore * 0.65);
     
     return Math.round(weightedScore);
 }
@@ -473,6 +534,25 @@ function calculateVwap(klines) {
     });
 
     return cumulativeVolume > 0 ? cumulativeTypicalPriceVolume / cumulativeVolume : 0;
+}
+
+function calculateRelativeStrength(symbolKlines, btcKlines) {
+    if (!symbolKlines || symbolKlines.length < 2 || !btcKlines || btcKlines.length < 2) {
+        return null;
+    }
+    const symbolOpen = parseFloat(symbolKlines[0][1]);
+    const symbolClose = parseFloat(symbolKlines[symbolKlines.length - 1][4]);
+    const btcOpen = parseFloat(btcKlines[0][1]);
+    const btcClose = parseFloat(btcKlines[btcKlines.length - 1][4]);
+
+    if (symbolOpen === 0 || btcOpen === 0) return null;
+
+    const symbolChange = ((symbolClose - symbolOpen) / symbolOpen) * 100;
+    const btcChange = ((btcClose - btcOpen) / btcOpen) * 100;
+
+    if (btcChange === 0) return symbolChange > 0 ? 100 : 0;
+
+    return (symbolChange / btcChange);
 }
 
 function calculateDivVectorConvictionScore(divVectors) {
@@ -635,24 +715,29 @@ function calculateSignalStrength(symbol, lsTopRatioChange, currentRatio) {
         signal = 'Weak Sell';
     }
 
-    if (signal !== 'Neutral') {
-        const now = Date.now();
-        const cooldown = 3600 * 1000; // 1 hour
-        if (!alertCooldowns[symbol] || (now - alertCooldowns[symbol] > cooldown)) {
-            const message = `*${signal} Signal (15m)*\n\n*Coin:* ${symbol}\n*L/S Change (15m):* ${change}\n*Current Ratio:* ${currentRatio}`;
-            sendTelegramMessage(message);
-            logger.info({
-                timestamp: new Date().toISOString(),
-                symbol: symbol,
-                signal: signal,
-                change: change,
-                currentRatio: currentRatio
-            });
-            alertCooldowns[symbol] = now;
-        }
-    }
-
     return signal;
+}
+
+function calculateWhaleSentiment(symbols) {
+    let bullishCount = 0;
+    let bearishCount = 0;
+
+    symbols.forEach(symbol => {
+        if (marketSentiment[symbol] === 'Bullish') {
+            bullishCount++;
+        } else if (marketSentiment[symbol] === 'Bearish') {
+            bearishCount++;
+        }
+    });
+
+    if (bullishCount > bearishCount) {
+        whaleSentiment = 'Bullish';
+    } else if (bearishCount > bullishCount) {
+        whaleSentiment = 'Bearish';
+    } else {
+        whaleSentiment = 'Neutral';
+    }
+    marketSentiment['alpha7'] = whaleSentiment;
 }
 
 

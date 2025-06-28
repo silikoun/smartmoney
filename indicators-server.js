@@ -17,7 +17,20 @@ app.get('/indicators', (req, res) => {
 });
 
 const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
-const { bitget_api_key, bitget_secret_key, bitget_passphrase } = config;
+const { bitget_api_key, bitget_secret_key, bitget_passphrase, telegram_bot_token, telegram_chat_id } = config;
+
+const sendTelegramMessage = async (message) => {
+    const url = `https://api.telegram.org/bot${telegram_bot_token}/sendMessage`;
+    try {
+        await axios.post(url, {
+            chat_id: telegram_chat_id,
+            text: message,
+            parse_mode: 'Markdown'
+        });
+    } catch (error) {
+        console.error('Error sending Telegram message:', error.message);
+    }
+};
 
 const getBitgetData = async (endpoint, params = {}) => {
     const timestamp = Date.now().toString();
@@ -57,7 +70,7 @@ const calculateMA = (klines, period) => {
         return null;
     }
     const closes = klines.map(k => parseFloat(k[4]));
-    const sum = closes.slice(-period).reduce((a, b) => a + b, 0);
+    const sum = closes.slice(0, period).reduce((a, b) => a + b, 0);
     return sum / period;
 };
 
@@ -73,16 +86,30 @@ const fetchAllDataForSymbol = async (symbol) => {
     const [
         klines_data_15m,
         klines_data_1h,
-        klines_data_4h
+        klines_data_4h,
+        ticker_data
     ] = await Promise.all([
-        getBitgetData('candles', { symbol: symbol, granularity: '15min', limit: 20 }),
-        getBitgetData('candles', { symbol: symbol, granularity: '1h', limit: 20 }),
-        getBitgetData('candles', { symbol: symbol, granularity: '4h', limit: 20 })
+        getBitgetData('candles', { symbol: symbol, granularity: '15min', limit: 50 }),
+        getBitgetData('candles', { symbol: symbol, granularity: '1h', limit: 50 }),
+        getBitgetData('candles', { symbol: symbol, granularity: '4h', limit: 50 }),
+        getBitgetData('ticker', { symbol: symbol })
     ]);
 
-    const ma15m = calculateMA(klines_data_15m ? klines_data_15m.data : null, 20);
-    const ma1h = calculateMA(klines_data_1h ? klines_data_1h.data : null, 20);
-    const ma4h = calculateMA(klines_data_4h ? klines_data_4h.data : null, 20);
+    const ma15m = calculateMA(klines_data_15m ? klines_data_15m.data : null, 50);
+    const ma1h = calculateMA(klines_data_1h ? klines_data_1h.data : null, 50);
+    const ma4h = calculateMA(klines_data_4h ? klines_data_4h.data : null, 50);
+
+    const price = ticker_data && ticker_data.data ? parseFloat(ticker_data.data.close) : null;
+
+    if (price && ma15m && Math.abs(price - ma15m) / ma15m < 0.005) {
+        sendTelegramMessage(`*${symbol}* is hitting the 15m MA50.`);
+    }
+    if (price && ma1h && Math.abs(price - ma1h) / ma1h < 0.005) {
+        sendTelegramMessage(`*${symbol}* is hitting the 1h MA50.`);
+    }
+    if (price && ma4h && Math.abs(price - ma4h) / ma4h < 0.005) {
+        sendTelegramMessage(`*${symbol}* is hitting the 4h MA50.`);
+    }
 
     return {
         symbol,
