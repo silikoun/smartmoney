@@ -198,6 +198,17 @@
         "timestamp": 1751473312278,
         "signal": 100
       }
+    ],
+    [
+      "ADAUSDT",
+      {
+        "symbol": "ADAUSDT",
+        "side": "long",
+        "entryPrice": 0.5964,
+        "size": 1000.9842696033762,
+        "timestamp": 1751474552766,
+        "signal": 100
+      }
     ]
   ],
   "tradeHistory": [

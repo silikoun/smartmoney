@@ -1,5 +1,5 @@
 const tableBody = document.getElementById('data-table-body');
-const socket = new WebSocket('ws://localhost:5018');
+const socket = new WebSocket('ws://localhost:5019');
 const customizeBtn = document.getElementById('customize-btn');
 const customizePanel = document.getElementById('customize-panel');
 const customizeCheckboxes = document.getElementById('customize-checkboxes');
