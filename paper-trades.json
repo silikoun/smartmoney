@@ -1,5 +1,5 @@
 {
-  "balance": 10009.041660667095,
+  "balance": 10009.842696033762,
   "openPositions": [
     [
       "SPKUSDT",
@@ -112,17 +112,6 @@
       }
     ],
     [
-      "RESOLVUSDT",
-      {
-        "symbol": "RESOLVUSDT",
-        "side": "long",
-        "entryPrice": 0.13872,
-        "size": 1000.5887555243116,
-        "timestamp": 1751438477460,
-        "signal": 100
-      }
-    ],
-    [
       "FORMUSDT",
       {
         "symbol": "FORMUSDT",
@@ -156,50 +145,6 @@
       }
     ],
     [
-      "LTCUSDT",
-      {
-        "symbol": "LTCUSDT",
-        "side": "long",
-        "entryPrice": 85.66,
-        "size": 1000.4594850422981,
-        "timestamp": 1751468617362,
-        "signal": 100
-      }
-    ],
-    [
-      "MKRUSDT",
-      {
-        "symbol": "MKRUSDT",
-        "side": "long",
-        "entryPrice": 1907.9,
-        "size": 1000.4594850422981,
-        "timestamp": 1751468631493,
-        "signal": 100
-      }
-    ],
-    [
-      "ETHUSDT",
-      {
-        "symbol": "ETHUSDT",
-        "side": "long",
-        "entryPrice": 2491.34,
-        "size": 1000.4594850422981,
-        "timestamp": 1751469298004,
-        "signal": 100
-      }
-    ],
-    [
-      "TRBUSDT",
-      {
-        "symbol": "TRBUSDT",
-        "side": "long",
-        "entryPrice": 36.682,
-        "size": 1000.4677299943717,
-        "timestamp": 1751469316312,
-        "signal": 100
-      }
-    ],
-    [
       "SUSDT",
       {
         "symbol": "SUSDT",
@@ -222,39 +167,6 @@
       }
     ],
     [
-      "BUSDT",
-      {
-        "symbol": "BUSDT",
-        "side": "short",
-        "entryPrice": 0.38481,
-        "size": 1000.6199008625125,
-        "timestamp": 1751470644203,
-        "signal": -100
-      }
-    ],
-    [
-      "SOLUSDT",
-      {
-        "symbol": "SOLUSDT",
-        "side": "long",
-        "entryPrice": 150.77,
-        "size": 1000.6199008625125,
-        "timestamp": 1751470677272,
-        "signal": 100
-      }
-    ],
-    [
-      "SPXUSDT",
-      {
-        "symbol": "SPXUSDT",
-        "side": "long",
-        "entryPrice": 1.2854,
-        "size": 1000.7140022108523,
-        "timestamp": 1751472323812,
-        "signal": 100
-      }
-    ],
-    [
       "AAVEUSDT",
       {
         "symbol": "AAVEUSDT",
@@ -273,6 +185,17 @@
         "entryPrice": 0.014436,
         "size": 1000.9041660667095,
         "timestamp": 1751472587031,
+        "signal": 100
+      }
+    ],
+    [
+      "ARBUSDT",
+      {
+        "symbol": "ARBUSDT",
+        "side": "long",
+        "entryPrice": 0.3527,
+        "size": 1000.9888855529935,
+        "timestamp": 1751473312278,
         "signal": 100
       }
     ]
@@ -40486,6 +40409,110 @@
       "pnl": -0.014367816091954025,
       "pnlAmount": -0.14376376837965027,
       "reason": "Stop Loss"
+    },
+    {
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "entryPrice": 2491.34,
+      "size": 1000.4594850422981,
+      "timestamp": 1751469298004,
+      "signal": 100,
+      "exitPrice": 2542.49,
+      "exitTimestamp": 1751473227017,
+      "pnl": 0.020531119798983533,
+      "pnlAmount": 0.20540553541432796,
+      "reason": "Take Profit"
+    },
+    {
+      "symbol": "LTCUSDT",
+      "side": "long",
+      "entryPrice": 85.66,
+      "size": 1000.4594850422981,
+      "timestamp": 1751468617362,
+      "signal": 100,
+      "exitPrice": 87.58,
+      "exitTimestamp": 1751473228728,
+      "pnl": 0.022414195657249614,
+      "pnlAmount": 0.22424494644889262,
+      "reason": "Take Profit"
+    },
+    {
+      "symbol": "MKRUSDT",
+      "side": "long",
+      "entryPrice": 1907.9,
+      "size": 1000.4594850422981,
+      "timestamp": 1751468631493,
+      "signal": 100,
+      "exitPrice": 1937.3,
+      "exitTimestamp": 1751473247597,
+      "pnl": 0.01540961266313741,
+      "pnlAmount": 0.15416693149663727,
+      "reason": "Take Profit"
+    },
+    {
+      "symbol": "TRBUSDT",
+      "side": "long",
+      "entryPrice": 36.682,
+      "size": 1000.4677299943717,
+      "timestamp": 1751469316312,
+      "signal": 100,
+      "exitPrice": 37.161,
+      "exitTimestamp": 1751473251027,
+      "pnl": 0.01305817567199169,
+      "pnlAmount": 0.13064283372425256,
+      "reason": "Take Profit"
+    },
+    {
+      "symbol": "SOLUSDT",
+      "side": "long",
+      "entryPrice": 150.77,
+      "size": 1000.6199008625125,
+      "timestamp": 1751470677272,
+      "signal": 100,
+      "exitPrice": 152.77,
+      "exitTimestamp": 1751473252952,
+      "pnl": 0.013265238442661005,
+      "pnlAmount": 0.13273461575413045,
+      "reason": "Take Profit"
+    },
+    {
+      "symbol": "SPXUSDT",
+      "side": "long",
+      "entryPrice": 1.2854,
+      "size": 1000.7140022108523,
+      "timestamp": 1751472323812,
+      "signal": 100,
+      "exitPrice": 1.2709,
+      "exitTimestamp": 1751473408230,
+      "pnl": -0.011280535241948171,
+      "pnlAmount": -0.11288589569050518,
+      "reason": "Stop Loss"
+    },
+    {
+      "symbol": "BUSDT",
+      "side": "short",
+      "entryPrice": 0.38481,
+      "size": 1000.6199008625125,
+      "timestamp": 1751470644203,
+      "signal": -100,
+      "exitPrice": 0.39223,
+      "exitTimestamp": 1751473464536,
+      "pnl": -0.019282243184948516,
+      "pnlAmount": -0.1929419626413004,
+      "reason": "Stop Loss"
+    },
+    {
+      "symbol": "RESOLVUSDT",
+      "side": "long",
+      "entryPrice": 0.13872,
+      "size": 1000.5887555243116,
+      "timestamp": 1751438477460,
+      "signal": 100,
+      "exitPrice": 0.14232,
+      "exitTimestamp": 1751473471494,
+      "pnl": 0.025951557093425545,
+      "pnlAmount": 0.2596683621602879,
+      "reason": "Take Profit"
     }
   ]
 }
