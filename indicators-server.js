@@ -74,6 +74,25 @@ const calculateMA = (klines, period) => {
     return sum / period;
 };
 
+const calculateRelativeStrength = (symbolKlines, btcKlines) => {
+    if (!symbolKlines || symbolKlines.length < 2 || !btcKlines || btcKlines.length < 2) {
+        return null;
+    }
+    const symbolOpen = parseFloat(symbolKlines[0][1]);
+    const symbolClose = parseFloat(symbolKlines[symbolKlines.length - 1][4]);
+    const btcOpen = parseFloat(btcKlines[0][1]);
+    const btcClose = parseFloat(btcKlines[btcKlines.length - 1][4]);
+
+    if (symbolOpen === 0 || btcOpen === 0) return null;
+
+    const symbolChange = ((symbolClose - symbolOpen) / symbolOpen) * 100;
+    const btcChange = ((btcClose - btcOpen) / btcOpen) * 100;
+
+    if (btcChange === 0) return symbolChange > 0 ? 100 : 0;
+
+    return (symbolChange / btcChange);
+};
+
 const getSymbols = async () => {
     const data = await getBitgetData('tickers');
     if (data && data.data) {
@@ -84,38 +103,50 @@ const getSymbols = async () => {
 
 const fetchAllDataForSymbol = async (symbol) => {
     const [
-        klines_data_15m,
         klines_data_1h,
         klines_data_4h,
-        ticker_data
+        klines_data_1d,
+        btc_klines_1h,
+        btc_klines_4h,
+        btc_klines_1d
     ] = await Promise.all([
-        getBitgetData('candles', { symbol: symbol, granularity: '15min', limit: 50 }),
-        getBitgetData('candles', { symbol: symbol, granularity: '1h', limit: 50 }),
-        getBitgetData('candles', { symbol: symbol, granularity: '4h', limit: 50 }),
-        getBitgetData('ticker', { symbol: symbol })
+        getBitgetData('candles', { symbol: symbol, granularity: '1h', limit: 200 }),
+        getBitgetData('candles', { symbol: symbol, granularity: '4h', limit: 200 }),
+        getBitgetData('candles', { symbol: symbol, granularity: '1d', limit: 200 }),
+        getBitgetData('candles', { symbol: 'BTCUSDT', granularity: '1h', limit: 2 }),
+        getBitgetData('candles', { symbol: 'BTCUSDT', granularity: '4h', limit: 2 }),
+        getBitgetData('candles', { symbol: 'BTCUSDT', granularity: '1d', limit: 2 })
     ]);
 
-    const ma15m = calculateMA(klines_data_15m ? klines_data_15m.data : null, 50);
-    const ma1h = calculateMA(klines_data_1h ? klines_data_1h.data : null, 50);
-    const ma4h = calculateMA(klines_data_4h ? klines_data_4h.data : null, 50);
+    const sma20_1h = calculateMA(klines_data_1h ? klines_data_1h.data : null, 20);
+    const sma50_1h = calculateMA(klines_data_1h ? klines_data_1h.data : null, 50);
+    const sma200_1h = calculateMA(klines_data_1h ? klines_data_1h.data : null, 200);
+    const sma20_4h = calculateMA(klines_data_4h ? klines_data_4h.data : null, 20);
+    const sma50_4h = calculateMA(klines_data_4h ? klines_data_4h.data : null, 50);
+    const sma200_4h = calculateMA(klines_data_4h ? klines_data_4h.data : null, 200);
+    const sma20_1d = calculateMA(klines_data_1d ? klines_data_1d.data : null, 20);
+    const sma50_1d = calculateMA(klines_data_1d ? klines_data_1d.data : null, 50);
+    const sma200_1d = calculateMA(klines_data_1d ? klines_data_1d.data : null, 200);
 
-    const price = ticker_data && ticker_data.data ? parseFloat(ticker_data.data.close) : null;
-
-    if (price && ma15m && Math.abs(price - ma15m) / ma15m < 0.005) {
-        sendTelegramMessage(`*${symbol}* is hitting the 15m MA50.`);
-    }
-    if (price && ma1h && Math.abs(price - ma1h) / ma1h < 0.005) {
-        sendTelegramMessage(`*${symbol}* is hitting the 1h MA50.`);
-    }
-    if (price && ma4h && Math.abs(price - ma4h) / ma4h < 0.005) {
-        sendTelegramMessage(`*${symbol}* is hitting the 4h MA50.`);
-    }
+    const relativeStrength1h = calculateRelativeStrength(klines_data_1h ? klines_data_1h.data : null, btc_klines_1h ? btc_klines_1h.data : null);
+    const relativeStrength4h = calculateRelativeStrength(klines_data_4h ? klines_data_4h.data : null, btc_klines_4h ? btc_klines_4h.data : null);
+    const relativeStrength24h = calculateRelativeStrength(klines_data_1d ? klines_data_1d.data : null, btc_klines_1d ? btc_klines_1d.data : null);
 
     return {
         symbol,
-        ma15m: ma15m ? ma15m.toFixed(4) : 'N/A',
-        ma1h: ma1h ? ma1h.toFixed(4) : 'N/A',
-        ma4h: ma4h ? ma4h.toFixed(4) : 'N/A'
+        sma20_1h: sma20_1h ? sma20_1h.toFixed(4) : 'N/A',
+        sma50_1h: sma50_1h ? sma50_1h.toFixed(4) : 'N/A',
+        sma200_1h: sma200_1h ? sma200_1h.toFixed(4) : 'N/A',
+        sma20_4h: sma20_4h ? sma20_4h.toFixed(4) : 'N/A',
+        sma50_4h: sma50_4h ? sma50_4h.toFixed(4) : 'N/A',
+        sma200_4h: sma200_4h ? sma200_4h.toFixed(4) : 'N/A',
+        sma20_1d: sma20_1d ? sma20_1d.toFixed(4) : 'N/A',
+        sma50_1d: sma50_1d ? sma50_1d.toFixed(4) : 'N/A',
+        sma200_1d: sma200_1d ? sma200_1d.toFixed(4) : 'N/A',
+        relativeStrength1h: relativeStrength1h ? relativeStrength1h.toFixed(2) : 'N/A',
+        relativeStrength4h: relativeStrength4h ? relativeStrength4h.toFixed(2) : 'N/A',
+        relativeStrength24h: relativeStrength24h ? relativeStrength24h.toFixed(2) : 'N/A',
+        timestamp: new Date().toLocaleTimeString()
     };
 };
 

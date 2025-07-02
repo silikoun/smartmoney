@@ -1,5 +1,5 @@
 const tableBody = document.getElementById('data-table-body');
-const socket = new WebSocket('ws://localhost:5017');
+const socket = new WebSocket('ws://localhost:5018');
 const customizeBtn = document.getElementById('customize-btn');
 const customizePanel = document.getElementById('customize-panel');
 const customizeCheckboxes = document.getElementById('customize-checkboxes');
@@ -7,6 +7,11 @@ const tableHeaders = document.getElementById('table-headers');
 const exportBtn = document.getElementById('export-btn');
 const searchCoinBtn = document.getElementById('search-coin-btn');
 const searchCoinInput = document.getElementById('search-coin-input');
+const exchangeDropdownBtn = document.getElementById('exchange-dropdown-btn');
+const exchangeDropdownPanel = document.getElementById('exchange-dropdown-panel');
+const selectedExchange = document.getElementById('selected-exchange');
+const moreActionsBtn = document.getElementById('more-actions-btn');
+const moreActionsPanel = document.getElementById('more-actions-panel');
 
 let tableData = [];
 let allData = [];
@@ -21,6 +26,27 @@ let visibleColumns = {};
 // --- Initialization ---
 
 function initialize() {
+    if (moreActionsBtn) {
+        moreActionsBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            moreActionsPanel.classList.toggle('hidden');
+        });
+    }
+
+    exchangeDropdownBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        exchangeDropdownPanel.classList.toggle('hidden');
+    });
+
+    exchangeDropdownPanel.addEventListener('click', (event) => {
+        if (event.target.tagName === 'A') {
+            const exchange = event.target.dataset.exchange;
+            selectedExchange.textContent = event.target.textContent;
+            exchangeDropdownPanel.classList.add('hidden');
+            // TODO: Implement exchange switching logic
+        }
+    });
+
     fetch('/api/config')
         .then(response => response.json())
         .then(data => {
@@ -35,7 +61,62 @@ function initialize() {
     }
 
     setupColumnCustomization();
+    setupTabSwitching();
     renderTable(); // Initial render
+
+    document.addEventListener('click', (event) => {
+        if (moreActionsPanel && !moreActionsPanel.classList.contains('hidden') && !moreActionsBtn.contains(event.target)) {
+            moreActionsPanel.classList.add('hidden');
+        }
+        if (exchangeDropdownPanel && !exchangeDropdownPanel.classList.contains('hidden') && !exchangeDropdownBtn.contains(event.target)) {
+            exchangeDropdownPanel.classList.add('hidden');
+        }
+        if (customizePanel && !customizePanel.classList.contains('hidden') && !customizeBtn.contains(event.target) && !customizePanel.contains(event.target)) {
+            customizePanel.classList.add('hidden');
+        }
+    });
+}
+
+// --- Tab Switching ---
+
+function setupTabSwitching() {
+    const tabs = document.querySelectorAll('[data-tabs-target]');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const target = tab.getAttribute('data-tabs-target').replace('#', '');
+            showTab(target);
+        });
+    });
+    showTab('overview'); // Show overview tab by default
+}
+
+function showTab(tabId) {
+    const tabs = document.querySelectorAll('[data-tabs-target]');
+    const openInterestTable = document.getElementById('open-interest-table-body').parentElement.parentElement;
+    const mainTable = document.getElementById('data-table-body').parentElement;
+
+    tabs.forEach(tab => {
+        const target = tab.getAttribute('data-tabs-target').replace('#', '');
+        if (target === tabId) {
+            tab.setAttribute('aria-selected', 'true');
+            tab.classList.add('border-blue-600', 'text-blue-600');
+            tab.classList.remove('hover:text-gray-600', 'hover:border-gray-300');
+        } else {
+            tab.setAttribute('aria-selected', 'false');
+            tab.classList.remove('border-blue-600', 'text-blue-600');
+            tab.classList.add('hover:text-gray-600', 'hover:border-gray-300');
+        }
+    });
+
+    if (tabId === 'open-interest') {
+        mainTable.classList.add('hidden');
+        openInterestTable.classList.remove('hidden');
+    } else {
+        mainTable.classList.remove('hidden');
+        openInterestTable.classList.add('hidden');
+    }
+
+    renderTable();
 }
 
 // --- WebSocket Handling ---
@@ -118,7 +199,8 @@ function setupColumnCustomization() {
         renderTable();
     });
 
-    customizeBtn.addEventListener('click', () => {
+    customizeBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
         customizePanel.classList.toggle('hidden');
     });
 }
@@ -126,37 +208,69 @@ function setupColumnCustomization() {
 // --- Rendering ---
 
 function renderTable() {
-    updateHeaderVisibility();
+    const activeTab = document.querySelector('[data-tabs-target][aria-selected="true"]').getAttribute('data-tabs-target').replace('#', '');
+    updateHeaderVisibility(activeTab);
     sortData();
     
     const fragment = document.createDocumentFragment();
     tableData.forEach(data => {
         const row = document.createElement('tr');
         row.id = data.symbol;
-        row.innerHTML = buildRowHTML(data);
+        row.innerHTML = buildRowHTML(data, activeTab);
         fragment.appendChild(row);
     });
 
-    tableBody.innerHTML = '';
-    tableBody.appendChild(fragment);
+    if (activeTab === 'open-interest') {
+        const openInterestTableBody = document.getElementById('open-interest-table-body');
+        openInterestTableBody.innerHTML = '';
+        openInterestTableBody.appendChild(fragment);
+    } else {
+        tableBody.innerHTML = '';
+        tableBody.appendChild(fragment);
+    }
+
+    $("span.sparkline").peity("line");
 }
 
-function updateHeaderVisibility() {
+function updateHeaderVisibility(activeTab) {
     const headers = Array.from(tableHeaders.children);
+    const openInterestTable = document.getElementById('open-interest-table-body').parentElement.parentElement;
+    const mainTable = document.getElementById('data-table-body').parentElement;
+
+    if (activeTab === 'open-interest') {
+        mainTable.classList.add('hidden');
+        openInterestTable.classList.remove('hidden');
+    } else {
+        mainTable.classList.remove('hidden');
+        openInterestTable.classList.add('hidden');
+    }
+
     headers.forEach(header => {
         const columnKey = header.dataset.sort;
+        const headerTab = header.dataset.tab;
+        if (columnKey === 'symbol') {
+            header.style.display = '';
+            return;
+        }
         if (columnKey) {
-            header.style.display = visibleColumns[columnKey] ? '' : 'none';
+            if (activeTab === 'overview') {
+                header.style.display = visibleColumns[columnKey] ? '' : 'none';
+            } else {
+                if (visibleColumns[columnKey] && headerTab === activeTab) {
+                    header.style.display = '';
+                } else {
+                    header.style.display = 'none';
+                }
+            }
         }
     });
 }
 
-function buildRowHTML(data) {
+function buildRowHTML(data, activeTab) {
     const cellClasses = 'px-4 py-3 text-xs whitespace-nowrap';
     const cells = {
         divergenceVector24h: () => `<td class="${cellClasses}">${formatDivergenceVectorCell(data.divergenceVector24h)}</td>`,
-        topTraderTrend24h: () => `<td class="${cellClasses} text-center">${formatTrendCell(data.topTraderTrend24h)}</td>`,
-        momentumIndex: () => `<td class="${cellClasses}"><div class="w-12 text-center px-2 py-0.5 text-xs font-bold text-white rounded" style="background-color: ${getMomentumColor(data.momentumIndex)};">${data.momentumIndex}</div></td>`,
+        aiScore: () => `<td class="${cellClasses} font-bold text-center">${data.aiScore || 'N/A'}</td>`,
         alphaDivergenceScore15m: () => `<td class="${cellClasses} font-bold">${formatDivergenceCell(data.alphaDivergenceScore15m)}</td>`,
         divergenceVector4h: () => `<td class="${cellClasses}">${formatDivergenceVectorCell(data.divergenceVector4h)}</td>`,
         divergenceVector1h: () => `<td class="${cellClasses}">${formatDivergenceVectorCell(data.divergenceVector1h)}</td>`,
@@ -165,54 +279,94 @@ function buildRowHTML(data) {
         oiConvictionScore: () => `<td class="${cellClasses} font-bold text-center">${formatConvictionCell(data.oiConvictionScore)}</td>`,
         lsConvictionScore: () => `<td class="${cellClasses} font-bold text-center">${formatConvictionCell(data.lsConvictionScore)}</td>`,
         divVectorConvictionScore: () => `<td class="${cellClasses} font-bold text-center">${formatConvictionCell(data.divVectorConvictionScore)}</td>`,
-        alpha7Signal: () => `<td class="${cellClasses} font-bold text-center">${formatAlpha7Signal(data.alpha7Signal)}</td>`,
-        vwapDeviation15m: () => `<td class="${cellClasses} font-bold">${formatVwapDeviationCell(data.vwapDeviation15m)}</td>`,
+        vwapDeviation15m: () => `<td class="px-4 py-3 text-xs whitespace-nowrap font-bold">${formatVwapDeviationCell(data.vwapDeviation15m)}</td>`,
         vwapDeviation4h: () => `<td class="${cellClasses} font-bold">${formatVwapDeviationCell(data.vwapDeviation4h)}</td>`,
         vwapDeviation1d: () => `<td class="${cellClasses} font-bold">${formatVwapDeviationCell(data.vwapDeviation1d)}</td>`,
-        signalStrength: () => `<td class="${cellClasses}"><div class="text-center px-2 py-0.5 text-xs font-bold rounded ${getSignalClass(data.signalStrength)}">${data.signalStrength}</div></td>`,
-        symbol: () => `<td class="${cellClasses} font-bold text-blue-600">${data.symbol}</td>`,
+        symbol: () => `<td class="px-4 py-3 text-xs whitespace-nowrap font-bold text-blue-600">${data.symbol}</td>`,
         lsTopPositionRatio: () => `<td class="${cellClasses} text-gray-500">${data.lsTopPositionRatio}</td>`,
         lsTopPositionRatioChange5m: () => `<td class="${cellClasses}">${formatChangeCell(data.lsTopPositionRatioChange5m)}</td>`,
         lsTopPositionRatioChange15m: () => `<td class="${cellClasses}">${formatChangeCell(data.lsTopPositionRatioChange15m)}</td>`,
         lsTopPositionRatioChange30m: () => `<td class="${cellClasses}">${formatChangeCell(data.lsTopPositionRatioChange30m)}</td>`,
         lsTopPositionRatioChange1h: () => `<td class="${cellClasses}">${formatChangeCell(data.lsTopPositionRatioChange1h)}</td>`,
         lsTopPositionRatioChange4h: () => `<td class="${cellClasses}">${formatChangeCell(data.lsTopPositionRatioChange4h)}</td>`,
-        openInterestChange1m: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestChange1m)}</td>`,
-        openInterestChange5m: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestChange5m)}</td>`,
-        openInterestChange15m: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestChange15m)}</td>`,
-        openInterestChange1h: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestChange1h)}</td>`,
-        openInterestChange4h: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestChange4h)}</td>`,
-        openInterestChange12h: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestChange12h)}</td>`,
-        openInterestChange24h: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestChange24h)}</td>`,
+        lsGlobalAccountRatio: () => `<td class="${cellClasses} text-gray-500">${data.lsGlobalAccountRatio}</td>`,
+        lsGlobalAccountRatioChange5m: () => `<td class="${cellClasses}">${formatChangeCell(data.lsGlobalAccountRatioChange5m)}</td>`,
+        lsGlobalAccountRatioChange15m: () => `<td class="${cellClasses}">${formatChangeCell(data.lsGlobalAccountRatioChange15m)}</td>`,
+        lsGlobalAccountRatioChange30m: () => `<td class="${cellClasses}">${formatChangeCell(data.lsGlobalAccountRatioChange30m)}</td>`,
+        lsGlobalAccountRatioChange1h: () => `<td class="${cellClasses}">${formatChangeCell(data.lsGlobalAccountRatioChange1h)}</td>`,
+        lsGlobalAccountRatioChange4h: () => `<td class="${cellClasses}">${formatChangeCell(data.lsGlobalAccountRatioChange4h)}</td>`,
+        openInterestChange1m: () => `<td class="${cellClasses}">${formatChangeCell(String(data.openInterestChange1m).replace('M', ''), 'm$')}</td>`,
+        openInterestChange5m: () => `<td class="${cellClasses}">${formatChangeCell(String(data.openInterestChange5m).replace('M', ''), 'm$')}</td>`,
+        openInterestChange15m: () => `<td class="${cellClasses}">${formatChangeCell(String(data.openInterestChange15m).replace('M', ''), 'm$')}</td>`,
+        openInterestChange1h: () => `<td class="${cellClasses}">${formatChangeCell(String(data.openInterestChange1h).replace('M', ''), 'm$')}</td>`,
+        openInterestChange4h: () => `<td class="${cellClasses}">${formatChangeCell(String(data.openInterestChange4h).replace('M', ''), 'm$')}</td>`,
+        openInterestChange12h: () => `<td class="${cellClasses}">${formatChangeCell(String(data.openInterestChange12h).replace('M', ''), 'm$')}</td>`,
+        openInterestChange24h: () => `<td class="${cellClasses}">${formatChangeCell(String(data.openInterestChange24h).replace('M', ''), 'm$')}</td>`,
+        openInterestChange48h: () => `<td class="${cellClasses}">${formatChangeCell(String(data.openInterestChange48h).replace('M', ''), 'm$')}</td>`,
+        openInterestPercent1m: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestPercent1m)}</td>`,
+        openInterestPercent5m: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestPercent5m)}</td>`,
+        openInterestPercent15m: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestPercent15m)}</td>`,
+        openInterestPercent1h: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestPercent1h)}</td>`,
+        openInterestPercent4h: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestPercent4h)}</td>`,
+        openInterestPercent12h: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestPercent12h)}</td>`,
+        openInterestPercent24h: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestPercent24h)}</td>`,
+        openInterestPercent48h: () => `<td class="${cellClasses}">${formatChangeCell(data.openInterestPercent48h)}</td>`,
+        volumeChange5m: () => `<td class="${cellClasses}">${formatChangeCell(data.volumeChange5m)}</td>`,
+        volumeChange15m: () => `<td class="${cellClasses}">${formatChangeCell(data.volumeChange15m)}</td>`,
+        volumeChange1h: () => `<td class="${cellClasses}">${formatChangeCell(data.volumeChange1h)}</td>`,
+        volumeChange4h: () => `<td class="${cellClasses}">${formatChangeCell(data.volumeChange4h)}</td>`,
+        volumeChange12h: () => `<td class="${cellClasses}">${formatChangeCell(data.volumeChange12h)}</td>`,
+        volumeChange24h: () => `<td class="${cellClasses}">${formatChangeCell(data.volumeChange24h)}</td>`,
         relativeStrength24h: () => `<td class="${cellClasses} text-gray-500">${data.relativeStrength24h}</td>`,
         relativeStrength4h: () => `<td class="${cellClasses} text-gray-500">${data.relativeStrength4h}</td>`,
         relativeStrength1h: () => `<td class="${cellClasses} text-gray-500">${data.relativeStrength1h}</td>`,
-        timestamp: () => `<td class="${cellClasses} text-gray-400">${data.timestamp}</td>`
+        timestamp: () => `<td class="${cellClasses} text-gray-400">${data.timestamp}</td>`,
+        fundingRate: () => `<td class="${cellClasses}">${formatChangeCell(data.fundingRate)}</td>`,
+        fundingRate1h: () => `<td class="${cellClasses}">${formatChangeCell(data.fundingRate1h)}</td>`,
+        fundingRate4h: () => `<td class="${cellClasses}">${formatChangeCell(data.fundingRate4h)}</td>`,
+        fundingRate24h: () => `<td class="${cellClasses}">${formatChangeCell(data.fundingRate24h)}</td>`,
+        fundingRateSuggestion: () => `<td class="${cellClasses}"><div class="text-center px-2 py-0.5 text-xs font-bold rounded ${getSignalClass(data.fundingRateSuggestion)}">${data.fundingRateSuggestion}</div></td>`
     };
 
     let html = '';
     const headers = Array.from(tableHeaders.children);
-    headers.forEach(header => {
-        const key = header.dataset.sort;
-        if (visibleColumns[key] && cells[key]) {
-            html += cells[key]();
-        }
-    });
+    html += cells['symbol']();
+    if (activeTab === 'open-interest') {
+        const openInterestHeaders = document.querySelectorAll('#open-interest th');
+        openInterestHeaders.forEach(header => {
+            const key = header.dataset.sort;
+            if (cells[key] && key !== 'symbol') {
+                html += cells[key]();
+            }
+        });
+    } else {
+        headers.forEach(header => {
+            const key = header.dataset.sort;
+            const tab = header.dataset.tab;
+            if (key === 'symbol') {
+                return;
+            }
+            if (activeTab === 'overview') {
+                if (visibleColumns[key] && cells[key]) {
+                    html += cells[key]();
+                }
+            } else {
+                if (visibleColumns[key] && cells[key] && tab === activeTab) {
+                    html += cells[key]();
+                }
+            }
+        });
+    }
     return html;
 }
 
 // --- Cell Formatting ---
 
-const formatChangeCell = (change) => {
+const formatChangeCell = (change, unit = '') => {
     if (change === 'N/A') return `<span class="text-gray-400">${change}</span>`;
     const changeValue = parseFloat(change);
     const colorClass = changeValue > 0 ? 'text-green-600' : 'text-red-600';
-    return `<span class="${colorClass}">${change}</span>`;
-};
-
-const getMomentumColor = (score) => {
-    const hue = (score / 100) * 120;
-    return `hsl(${hue}, 100%, 45%)`;
+    return `<span class="${colorClass}">${change}${unit}</span>`;
 };
 
 const getSignalClass = (signal) => {
@@ -271,21 +425,6 @@ const formatVwapDeviationCell = (deviation) => {
     return `<span class="${colorClass}">${deviation}</span>`;
 };
 
-const formatAlpha7Signal = (score) => {
-    if (score === undefined || score === null) return `<span class="text-gray-400">N/A</span>`;
-    const scoreValue = parseInt(score, 10);
-    let bgColor = 'bg-gray-200';
-    let textColor = 'text-gray-800';
-    if (scoreValue > 50) {
-        bgColor = 'bg-green-500';
-        textColor = 'text-white';
-    } else if (scoreValue < -50) {
-        bgColor = 'bg-red-500';
-        textColor = 'text-white';
-    }
-    return `<div class="px-3 py-1 text-xs font-bold rounded ${bgColor} ${textColor}">${scoreValue}</div>`;
-};
-
 function updateMarketSentiment(symbol, score) {
     const sentimentId = symbol === 'BTCUSDT' ? 'sentiment-btc' : (symbol === 'ETHUSDT' ? 'sentiment-eth' : 'sentiment-alpha7');
     const sentimentElement = document.getElementById(sentimentId);
@@ -320,9 +459,6 @@ function sortData() {
         if (sortColumn === 'signalStrength') {
             aValue = signalStrengthMap[aValue] || 0;
             bValue = signalStrengthMap[bValue] || 0;
-        } else if (sortColumn === 'topTraderTrend24h') {
-            aValue = trendMap[aValue] || 0;
-            bValue = trendMap[bValue] || 0;
         } else {
             if (aValue === 'N/A') aValue = sortDirection === 'asc' ? Infinity : -Infinity;
             if (bValue === 'N/A') bValue = sortDirection === 'asc' ? Infinity : -Infinity;
@@ -400,6 +536,48 @@ searchCoinInput.addEventListener('keyup', (event) => {
     }
 });
 
+
+// --- Filter Dropdown ---
+const filterDropdown = document.createElement('div');
+filterDropdown.id = 'filter-dropdown';
+filterDropdown.className = 'hidden absolute bg-white border border-gray-200 rounded shadow-lg z-20 p-4';
+document.body.appendChild(filterDropdown);
+
+document.addEventListener('click', (event) => {
+    if (event.target.classList.contains('filter-btn')) {
+        const column = event.target.dataset.column;
+        const values = [...new Set(allData.map(item => item[column]))];
+        let content = `<input type="text" id="filter-input" placeholder="Filter..." class="px-3 py-1.5 text-xs border border-gray-300 rounded w-full mb-2">`;
+        content += '<div id="filter-values" class="max-h-48 overflow-y-auto">';
+        values.forEach(value => {
+            content += `<label class="flex items-center space-x-2 text-sm"><input type="checkbox" class="filter-checkbox" value="${value}"> ${value}</label>`;
+        });
+        content += '</div>';
+        content += '<button id="apply-filter-btn" class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded mt-2">Apply</button>';
+        filterDropdown.innerHTML = content;
+        const rect = event.target.getBoundingClientRect();
+        filterDropdown.style.left = `${rect.left}px`;
+        filterDropdown.style.top = `${rect.bottom}px`;
+        filterDropdown.classList.remove('hidden');
+
+        document.getElementById('apply-filter-btn').addEventListener('click', () => {
+            const checkedValues = [...document.querySelectorAll('.filter-checkbox:checked')].map(cb => cb.value);
+            applyFilter(column, checkedValues);
+            filterDropdown.classList.add('hidden');
+        });
+    } else if (!filterDropdown.contains(event.target)) {
+        filterDropdown.classList.add('hidden');
+    }
+});
+
+function applyFilter(column, values) {
+    if (values.length === 0) {
+        tableData = [...allData];
+    } else {
+        tableData = allData.filter(item => values.includes(String(item[column])));
+    }
+    renderTable();
+}
 
 // --- Initial Load ---
 initialize();

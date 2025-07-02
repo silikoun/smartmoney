@@ -12,6 +12,7 @@ const wss = new WebSocket.Server({ server });
 const fs = require('fs');
 
 const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
+let isPaused = false;
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -25,6 +26,18 @@ app.get('/logs', (req, res) => {
 
 app.get('/indicators', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'indicators.html'));
+});
+
+app.get('/ma-indicators', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'ma-indicators.html'));
+});
+
+app.get('/rs-indicators', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'rs-indicators.html'));
+});
+
+app.get('/funding-rate', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'funding-rate.html'));
 });
 
 app.get('/api/logs', (req, res) => {
@@ -64,9 +77,26 @@ app.get('/api/paper-portfolio', (req, res) => {
     res.json(portfolioToSend);
 });
 
+app.get('/api/bybit-leaderboard', async (req, res) => {
+    try {
+        const response = await axios.get('https://api.bybit.com/v5/ranking/leaderboard', {
+            params: {
+                category: 'linear',
+                limit: 100
+            }
+        });
+        res.json(response.data);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch Bybit leaderboard data' });
+    }
+});
+
 
 
 const getBinanceData = async (symbol, endpoint, params = {}) => {
+    if (isPaused) {
+        return null;
+    }
     try {
         const requestParams = { ...params };
         if (symbol) {
@@ -79,9 +109,14 @@ const getBinanceData = async (symbol, endpoint, params = {}) => {
             console.warn(`Request for ${symbol} on ${endpoint} timed out. Will retry next cycle.`);
         } else if (error.code === 'ECONNRESET' || error.code === 'EAI_AGAIN') {
             console.warn(`Socket issue for ${symbol} on ${endpoint}. Will retry next cycle.`);
-        } else if (error.response && error.response.status === 418) {
-            console.warn(`IP address has been blocked by Binance API. Pausing requests for ${config.ip_blacklist_cooldown_minutes || 10} minutes.`);
-            // Implement a mechanism to pause all requests for a while
+        } else if (error.response && (error.response.status === 418 || error.response.status === 403)) {
+            const cooldownMinutes = config.ip_blacklist_cooldown_minutes || 10;
+            console.warn(`IP address has been blocked by Binance API. Pausing requests for ${cooldownMinutes} minutes.`);
+            isPaused = true;
+            setTimeout(() => {
+                isPaused = false;
+                console.log('Resuming API requests after cooldown.');
+            }, cooldownMinutes * 60 * 1000);
         } else {
             console.error(`Unhandled error for ${symbol} on ${endpoint}: ${error.message}`);
         }
@@ -113,28 +148,34 @@ async function sendTelegramMessage(message) {
     }
 }
 
-async function sendAlpha7Alert(symbol, score, oiConviction) {
-    const threshold = config.alpha7_alert_threshold || 75;
-    let signal = '';
+function calculateAiScore(oiChange, divChange, lsChange) {
+    const weights = {
+        oi: 0.4,
+        div: 0.35,
+        ls: 0.25
+    };
 
-    if (score > threshold) {
-        signal = 'Strong Bullish Alpha-7 Signal';
-    } else if (score < -threshold) {
-        signal = 'Strong Bearish Alpha-7 Signal';
+    let score = 0;
+
+    if (oiChange > 4000000) {
+        score += weights.oi;
+    } else if (oiChange < -4000000) {
+        score -= weights.oi;
     }
 
-    if (signal) {
-        const now = Date.now();
-        const cooldown = 3600 * 1000; // 1 hour cooldown
-        if (!alertCooldowns[symbol] || (now - alertCooldowns[symbol] > cooldown)) {
-            const btcSentiment = `BTC: ${marketSentiment.BTCUSDT}`;
-            const ethSentiment = `ETH: ${marketSentiment.ETHUSDT}`;
-            const whaleSent = `Whale: ${whaleSentiment}`;
-            const message = `*${signal}*\n\n*Coin:* ${symbol}\n*Alpha-7 Score:* ${score}\n*OI Conviction:* ${oiConviction}\n\n*Market Context:*\n${btcSentiment}\n${ethSentiment}\n${whaleSent}`;
-            await sendTelegramMessage(message);
-            alertCooldowns[symbol] = now;
-        }
+    if (divChange > 0) {
+        score += weights.div;
+    } else if (divChange < 0) {
+        score -= weights.div;
     }
+
+    if (lsChange > 0) {
+        score += weights.ls;
+    } else if (lsChange < 0) {
+        score -= weights.ls;
+    }
+
+    return Math.round(score * 100);
 }
 
 wss.on('connection', (ws) => {
@@ -241,11 +282,10 @@ const fetchAllDataForSymbol = async (symbol) => {
     const ls_global_position_endpoint = 'https://fapi.binance.com/futures/data/globalLongShortAccountRatio';
     const oi_hist_endpoint = 'https://fapi.binance.com/futures/data/openInterestHist';
     const klines_endpoint = 'https://fapi.binance.com/fapi/v1/klines';
+    const funding_rate_endpoint = 'https://fapi.binance.com/fapi/v1/fundingRate';
+    const funding_rate_hist_endpoint = 'https://fapi.binance.com/fapi/v1/fundingRate';
 
     const [
-        btc_klines_24h,
-        btc_klines_4h,
-        btc_klines_1h,
         open_interest_data,
         price_data,
         oi_hist_data_1h,
@@ -253,6 +293,7 @@ const fetchAllDataForSymbol = async (symbol) => {
         ls_top_hist_data,
         ls_top_position_data_15m,
         ls_global_position_data_15m,
+        ls_global_hist_data,
         ls_top_position_data_24h,
         ls_global_position_data_24h,
         ls_top_position_data_4h,
@@ -261,21 +302,26 @@ const fetchAllDataForSymbol = async (symbol) => {
         ls_global_position_data_1h,
         ls_top_position_data_15m_for_divergence,
         ls_global_position_data_15m_for_divergence,
+        ls_top_position_data_5m_for_divergence,
+        ls_global_position_data_5m_for_divergence,
+        klines_data_5m,
         klines_data_15m,
         klines_data_1h,
         klines_data_4h,
-        klines_data_1d
+        klines_data_12h,
+        klines_data_1d,
+        funding_rate_data,
+        funding_rate_hist_data,
+        ls_global_account_ratio_data
     ] = await Promise.all([
-        getBinanceData('BTCUSDT', klines_endpoint, { interval: '1d', limit: 2 }),
-        getBinanceData('BTCUSDT', klines_endpoint, { interval: '4h', limit: 2 }),
-        getBinanceData('BTCUSDT', klines_endpoint, { interval: '1h', limit: 2 }),
         getBinanceData(symbol, open_interest_endpoint),
         getBinanceData(symbol, price_endpoint),
-        getBinanceData(symbol, oi_hist_endpoint, { period: '1h', limit: 25 }),
+        getBinanceData(symbol, oi_hist_endpoint, { period: '1h', limit: 49 }),
         getBinanceData(symbol, oi_hist_endpoint, { period: '5m', limit: 4 }),
         getBinanceData(symbol, ls_top_position_endpoint, { period: '5m', limit: 288 }),
         getBinanceData(symbol, ls_top_position_endpoint, { period: '5m', limit: 3 }),
         getBinanceData(symbol, ls_global_position_endpoint, { period: '5m', limit: 3 }),
+        getBinanceData(symbol, ls_global_position_endpoint, { period: '5m', limit: 288 }),
         getBinanceData(symbol, ls_top_position_endpoint, { period: '15m', limit: 96 }),
         getBinanceData(symbol, ls_global_position_endpoint, { period: '15m', limit: 96 }),
         getBinanceData(symbol, ls_top_position_endpoint, { period: '5m', limit: 48 }),
@@ -284,10 +330,17 @@ const fetchAllDataForSymbol = async (symbol) => {
         getBinanceData(symbol, ls_global_position_endpoint, { period: '5m', limit: 12 }),
         getBinanceData(symbol, ls_top_position_endpoint, { period: '5m', limit: 3 }),
         getBinanceData(symbol, ls_global_position_endpoint, { period: '5m', limit: 3 }),
-        getBinanceData(symbol, klines_endpoint, { interval: '15m', limit: 96 }),
-        getBinanceData(symbol, klines_endpoint, { interval: '1h', limit: 96 }),
-        getBinanceData(symbol, klines_endpoint, { interval: '4h', limit: 96 }),
-        getBinanceData(symbol, klines_endpoint, { interval: '1d', limit: 96 })
+        getBinanceData(symbol, ls_top_position_endpoint, { period: '5m', limit: 2 }),
+        getBinanceData(symbol, ls_global_position_endpoint, { period: '5m', limit: 2 }),
+        getBinanceData(symbol, klines_endpoint, { interval: '5m', limit: 2 }),
+        getBinanceData(symbol, klines_endpoint, { interval: '15m', limit: 2 }),
+        getBinanceData(symbol, klines_endpoint, { interval: '1h', limit: 2 }),
+        getBinanceData(symbol, klines_endpoint, { interval: '4h', limit: 2 }),
+        getBinanceData(symbol, klines_endpoint, { interval: '12h', limit: 2 }),
+        getBinanceData(symbol, klines_endpoint, { interval: '1d', limit: 2 }),
+        getBinanceData(symbol, funding_rate_endpoint),
+        getBinanceData(symbol, funding_rate_hist_endpoint, { limit: 1000 }),
+        getBinanceData(symbol, ls_global_position_endpoint, { period: '5m', limit: 1 })
     ]);
 
     const price = price_data ? parseFloat(price_data.price) : 0;
@@ -306,24 +359,27 @@ const fetchAllDataForSymbol = async (symbol) => {
     const divergenceVector4h = calculateDivergenceVector(ls_top_position_data_4h, ls_global_position_data_4h);
     const divergenceVector1h = calculateDivergenceVector(ls_top_position_data_1h, ls_global_position_data_1h);
     const divergenceVector15m = calculateDivergenceVector(ls_top_position_data_15m_for_divergence, ls_global_position_data_15m_for_divergence);
+    const divergenceVector5m = calculateDivergenceVector(ls_top_position_data_5m_for_divergence, ls_global_position_data_5m_for_divergence);
     const topTraderTrend24h = calculate24hTrend(ls_top_position_data_24h);
 
     // --- OI Change Calculation ---
-    const calculateOiChange = (data, candles) => {
-        if (!data || data.length <= candles) return 0;
-        const now = parseFloat(data[data.length - 1].sumOpenInterestValue);
-        const then = parseFloat(data[data.length - 1 - candles].sumOpenInterestValue);
-        return now - then;
-    };
-
     const openInterestChange5m = calculateOiChange(oi_hist_data_5m, 1);
     const openInterestChange15m = calculateOiChange(oi_hist_data_5m, 3);
     const openInterestChange1h = calculateOiChange(oi_hist_data_1h, 1);
     const openInterestChange4h = calculateOiChange(oi_hist_data_1h, 4);
     const openInterestChange12h = calculateOiChange(oi_hist_data_1h, 12);
     const openInterestChange24h = calculateOiChange(oi_hist_data_1h, 24);
+    const openInterestChange48h = calculateOiChange(oi_hist_data_1h, 48);
+    const openInterestPercent1h = calculateOiPercentChange(oi_hist_data_1h, 1);
+    const openInterestPercent4h = calculateOiPercentChange(oi_hist_data_1h, 4);
+    const openInterestPercent12h = calculateOiPercentChange(oi_hist_data_1h, 12);
+    const openInterestPercent24h = calculateOiPercentChange(oi_hist_data_1h, 24);
+    const openInterestPercent48h = calculateOiPercentChange(oi_hist_data_1h, 48);
+    const openInterestPercent5m = calculateOiPercentChange(oi_hist_data_5m, 1);
+    const openInterestPercent15m = calculateOiPercentChange(oi_hist_data_5m, 3);
     
     const openInterestChange1m = prev.openInterest ? (openInterestInUSD - prev.openInterest) : 0;
+    const openInterestPercent1m = prev.openInterest ? (openInterestChange1m / prev.openInterest) * 100 : 0;
 
     // --- 15m Conviction and Divergence Calculation ---
     const oiConvictionScore = calculateOiConvictionScore({
@@ -333,7 +389,8 @@ const fetchAllDataForSymbol = async (symbol) => {
         openInterestChange1h,
         openInterestChange4h,
         openInterestChange12h,
-        openInterestChange24h
+        openInterestChange24h,
+        openInterestChange48h
     });
     const alphaDivergenceScore15m = calculateAlphaDivergence(ls_top_position_data_15m, ls_global_position_data_15m, oiConvictionScore);
 
@@ -354,30 +411,13 @@ const fetchAllDataForSymbol = async (symbol) => {
     const lsTopPositionRatioChange1h = calculateLsChange(ls_top_hist_data, 12);
     const lsTopPositionRatioChange4h = calculateLsChange(ls_top_hist_data, 48);
 
-    const momentumIndex = calculateMomentumIndex(lsTopPositionRatioChange15mFrom5m, openInterestChange1m, openInterestChange5m);
+    const lsGlobalAccountRatioChange5m = calculateLsChange(ls_global_hist_data, 1);
+    const lsGlobalAccountRatioChange15m = calculateLsChange(ls_global_hist_data, 3);
+    const lsGlobalAccountRatioChange30m = calculateLsChange(ls_global_hist_data, 6);
+    const lsGlobalAccountRatioChange1h = calculateLsChange(ls_global_hist_data, 12);
+    const lsGlobalAccountRatioChange4h = calculateLsChange(ls_global_hist_data, 48);
 
-    // --- L/S Conviction Score Calculation ---
-    const lsConvictionScore = calculateLsConvictionScore({
-        lsTopPositionRatioChange15m: lsTopPositionRatioChange15mFrom5m,
-        lsTopPositionRatioChange30m,
-        lsTopPositionRatioChange1h,
-        lsTopPositionRatioChange4h
-    });
-
-    // --- Divergence Vector Conviction Score Calculation ---
-    const divVectorConvictionScore = calculateDivVectorConvictionScore({
-        divergenceVector15m,
-        divergenceVector1h,
-        divergenceVector4h
-    });
-
-    // --- Alpha-7 Signal Calculation ---
-    const alpha7Signal = calculateAlpha7Signal(lsConvictionScore, divVectorConvictionScore, {
-        lsTopPositionRatioChange15m: lsTopPositionRatioChange15mFrom5m,
-        lsTopPositionRatioChange30m,
-        lsTopPositionRatioChange1h,
-        lsTopPositionRatioChange4h
-    });
+    const aiScore = calculateAiScore(openInterestChange24h, divergenceVector24h, lsTopPositionRatioChange4h);
 
     // --- VWAP Calculation ---
     const vwap15m = calculateVwap(klines_data_15m);
@@ -387,43 +427,60 @@ const fetchAllDataForSymbol = async (symbol) => {
     const vwapDeviation4h = vwap4h > 0 ? ((price - vwap4h) / vwap4h) * 100 : 0;
     const vwapDeviation1d = vwap1d > 0 ? ((price - vwap1d) / vwap1d) * 100 : 0;
 
-    // --- Relative Strength Calculation ---
-    const relativeStrength24h = calculateRelativeStrength(klines_data_1d, btc_klines_24h);
-    const relativeStrength4h = calculateRelativeStrength(klines_data_4h, btc_klines_4h);
-    const relativeStrength1h = calculateRelativeStrength(klines_data_1h, btc_klines_1h);
-
     // --- Paper Trading ---
     paperTrader.checkTrades(symbol, price);
 
-    if (alpha7Signal > 80 && vwapDeviation15m > 0) {
-        paperTrader.openPosition(symbol, 'long', price, alpha7Signal);
-    } else if (alpha7Signal < -80 && vwapDeviation15m < 0) {
-        paperTrader.openPosition(symbol, 'short', price, alpha7Signal);
+    if (aiScore > 80 && vwapDeviation15m > 0) {
+        paperTrader.openPosition(symbol, 'long', price, aiScore);
+    } else if (aiScore < -80 && vwapDeviation15m < 0) {
+        paperTrader.openPosition(symbol, 'short', price, aiScore);
     }
 
     if (symbol === 'BTCUSDT' || symbol === 'ETHUSDT') {
         let sentiment = 'Neutral';
-        if (alpha7Signal > 50) sentiment = 'Bullish';
-        else if (alpha7Signal < -50) sentiment = 'Bearish';
+        if (aiScore > 50) sentiment = 'Bullish';
+        else if (aiScore < -50) sentiment = 'Bearish';
         marketSentiment[symbol] = sentiment;
     }
 
-    sendAlpha7Alert(symbol, alpha7Signal, oiConvictionScore);
+    // --- Volume Change Calculation ---
+    const calculateVolumeChange = (data) => {
+        if (!data || data.length < 2) return 0;
+        const now = parseFloat(data[data.length - 1][7]);
+        const then = parseFloat(data[data.length - 2][7]);
+        return now - then;
+    };
 
-    // --- Signal Strength Calculation ---
-    const signalStrength = calculateSignalStrength(symbol, lsTopPositionRatioChange15mFrom5m, currentLsTopPositionRatio);
+    const volumeChange5m = calculateVolumeChange(klines_data_5m);
+    const volumeChange15m = calculateVolumeChange(klines_data_15m);
+    const volumeChange1h = calculateVolumeChange(klines_data_1h);
+    const volumeChange4h = calculateVolumeChange(klines_data_4h);
+    const volumeChange12h = calculateVolumeChange(klines_data_12h);
+    const volumeChange24h = calculateVolumeChange(klines_data_1d);
 
+    const lsConvictionScore = calculateLsConvictionScore({
+        lsTopPositionRatioChange15m: lsTopPositionRatioChange15mFrom5m,
+        lsTopPositionRatioChange30m,
+        lsTopPositionRatioChange1h,
+        lsTopPositionRatioChange4h,
+    });
+
+    const divVectorConvictionScore = calculateDivVectorConvictionScore({
+        divergenceVector15m,
+        divergenceVector1h,
+        divergenceVector4h,
+    });
 
     const data = {
         symbol,
-        momentumIndex,
-        signalStrength,
+        aiScore,
         alphaDivergenceScore15m: alphaDivergenceScore15m ? alphaDivergenceScore15m.toFixed(4) : 'N/A',
         oiConvictionScore,
         divergenceVector24h: divergenceVector24h ? divergenceVector24h.toFixed(4) : 'N/A',
         divergenceVector4h: divergenceVector4h ? divergenceVector4h.toFixed(4) : 'N/A',
         divergenceVector1h: divergenceVector1h ? divergenceVector1h.toFixed(4) : 'N/A',
         divergenceVector15m: divergenceVector15m ? divergenceVector15m.toFixed(4) : 'N/A',
+        divergenceVector5m: divergenceVector5m ? divergenceVector5m.toFixed(4) : 'N/A',
         topTraderTrend24h,
         timestamp: new Date().toLocaleTimeString(),
         lsTopPositionRatio: currentLsTopPositionRatio !== null ? currentLsTopPositionRatio.toFixed(4) : 'N/A',
@@ -434,7 +491,6 @@ const fetchAllDataForSymbol = async (symbol) => {
         lsTopPositionRatioChange4h,
         lsConvictionScore,
         divVectorConvictionScore,
-        alpha7Signal,
         vwapDeviation15m: vwapDeviation15m.toFixed(2) + '%',
         vwapDeviation4h: vwapDeviation4h.toFixed(2) + '%',
         vwapDeviation1d: vwapDeviation1d.toFixed(2) + '%',
@@ -445,9 +501,32 @@ const fetchAllDataForSymbol = async (symbol) => {
         openInterestChange4h: (openInterestChange4h / 1000000).toFixed(2) + 'M',
         openInterestChange12h: (openInterestChange12h / 1000000).toFixed(2) + 'M',
         openInterestChange24h: (openInterestChange24h / 1000000).toFixed(2) + 'M',
-        relativeStrength24h: relativeStrength24h ? relativeStrength24h.toFixed(2) : 'N/A',
-        relativeStrength4h: relativeStrength4h ? relativeStrength4h.toFixed(2) : 'N/A',
-        relativeStrength1h: relativeStrength1h ? relativeStrength1h.toFixed(2) : 'N/A'
+        openInterestChange48h: (openInterestChange48h / 1000000).toFixed(2) + 'M',
+        openInterestPercent1h: openInterestPercent1h ? openInterestPercent1h.toFixed(2) + '%' : 'N/A',
+        openInterestPercent4h: openInterestPercent4h ? openInterestPercent4h.toFixed(2) + '%' : 'N/A',
+        openInterestPercent12h: openInterestPercent12h ? openInterestPercent12h.toFixed(2) + '%' : 'N/A',
+        openInterestPercent24h: openInterestPercent24h ? openInterestPercent24h.toFixed(2) + '%' : 'N/A',
+        openInterestPercent48h: openInterestPercent48h ? openInterestPercent48h.toFixed(2) + '%' : 'N/A',
+        openInterestPercent1m: openInterestPercent1m ? openInterestPercent1m.toFixed(2) + '%' : 'N/A',
+        openInterestPercent5m: openInterestPercent5m ? openInterestPercent5m.toFixed(2) + '%' : 'N/A',
+        openInterestPercent15m: openInterestPercent15m ? openInterestPercent15m.toFixed(2) + '%' : 'N/A',
+        volumeChange5m: (volumeChange5m / 1000000).toFixed(2) + 'M',
+        volumeChange15m: (volumeChange15m / 1000000).toFixed(2) + 'M',
+        volumeChange1h: (volumeChange1h / 1000000).toFixed(2) + 'M',
+        volumeChange4h: (volumeChange4h / 1000000).toFixed(2) + 'M',
+        volumeChange12h: (volumeChange12h / 1000000).toFixed(2) + 'M',
+        volumeChange24h: (volumeChange24h / 1000000).toFixed(2) + 'M',
+        fundingRate: funding_rate_data && funding_rate_data[0] ? parseFloat(funding_rate_data[0].lastFundingRate).toFixed(4) : 'N/A',
+        fundingRate1h: calculateFundingRateVariation(funding_rate_hist_data, 1),
+        fundingRate4h: calculateFundingRateVariation(funding_rate_hist_data, 4),
+        fundingRate24h: calculateFundingRateVariation(funding_rate_hist_data, 24),
+        fundingRateSuggestion: getFundingRateSuggestion(funding_rate_data),
+        lsGlobalAccountRatio: ls_global_account_ratio_data && ls_global_account_ratio_data[0] ? parseFloat(ls_global_account_ratio_data[0].longShortRatio).toFixed(4) : 'N/A',
+        lsGlobalAccountRatioChange5m,
+        lsGlobalAccountRatioChange15m,
+        lsGlobalAccountRatioChange30m,
+        lsGlobalAccountRatioChange1h,
+        lsGlobalAccountRatioChange4h
     };
 
     previousData[symbol] = {
@@ -456,6 +535,68 @@ const fetchAllDataForSymbol = async (symbol) => {
 
     return data;
 };
+
+const calculateOiChange = (data, candles) => {
+    if (!data || data.length <= candles) return 0;
+    data.sort((a, b) => a.timestamp - b.timestamp);
+    const now = parseFloat(data[data.length - 1].sumOpenInterestValue);
+    const then = parseFloat(data[data.length - 1 - candles].sumOpenInterestValue);
+    if (isNaN(now) || isNaN(then)) {
+        return 0;
+    }
+    return now - then;
+};
+
+const calculateOiPercentChange = (data, candles) => {
+    if (!data || data.length <= candles) return 0;
+    data.sort((a, b) => a.timestamp - b.timestamp);
+    const now = parseFloat(data[data.length - 1].sumOpenInterest);
+    const then = parseFloat(data[data.length - 1 - candles].sumOpenInterest);
+    if (isNaN(now) || isNaN(then) || then === 0) {
+        return 0;
+    }
+    return ((now - then) / then) * 100;
+};
+
+function calculateFundingRateVariation(data, hours) {
+    if (!data || data.length < 2) return 'N/A';
+
+    // Sort by funding time, descending (newest first)
+    data.sort((a, b) => b.fundingTime - a.fundingTime);
+
+    const latestRate = parseFloat(data[0].fundingRate);
+    if (isNaN(latestRate)) return 'N/A';
+
+    const now_ts = data[0].fundingTime;
+    const target_ts = now_ts - (hours * 60 * 60 * 1000);
+
+    let pastRateEntry = null;
+
+    // Find the first entry with a timestamp at or before the target time
+    for (let i = 1; i < data.length; i++) {
+        if (data[i].fundingTime <= target_ts) {
+            pastRateEntry = data[i];
+            break;
+        }
+    }
+
+    if (!pastRateEntry) return 'N/A'; // Not enough historical data
+
+    const pastRate = parseFloat(pastRateEntry.fundingRate);
+    if (isNaN(pastRate)) return 'N/A';
+
+    return ((latestRate - pastRate) * 100).toFixed(4);
+}
+
+function getFundingRateSuggestion(data) {
+    if (!data) return 'Neutral';
+    const rate = parseFloat(data.lastFundingRate);
+    if (isNaN(rate)) return 'Neutral';
+
+    if (rate > (config.funding_rate_threshold_high || 0.001)) return 'High';
+    if (rate < (config.funding_rate_threshold_low || -0.001)) return 'Low';
+    return 'Neutral';
+}
 
 function calculate24hTrend(data24h) {
     if (!data24h || data24h.length < 96) {
@@ -479,41 +620,6 @@ function calculate24hTrend(data24h) {
     }
 }
 
-function calculateAlpha7Signal(lsConviction, divConviction, lsChanges) {
-    if (lsConviction === undefined || divConviction === undefined) return 0;
-
-    const weights = {
-        lsTopPositionRatioChange4h: 0.4,
-        lsTopPositionRatioChange1h: 0.3,
-        lsTopPositionRatioChange30m: 0.2,
-        lsTopPositionRatioChange15m: 0.1,
-    };
-
-    let score = 0;
-    let totalWeight = 0;
-
-    for (const key in weights) {
-        const value = parseFloat(lsChanges[key]);
-        if (isNaN(value)) continue;
-
-        totalWeight += weights[key];
-        if (value > 0) {
-            score += weights[key];
-        } else if (value < 0) {
-            score -= weights[key];
-        }
-    }
-
-    if (totalWeight === 0) return 0;
-
-    const lsScore = (score / totalWeight) * 100;
-
-    // 35% weight on Divergence Conviction, 65% on L/S Conviction
-    const weightedScore = (divConviction * 0.35) + (lsScore * 0.65);
-    
-    return Math.round(weightedScore);
-}
-
 function calculateVwap(klines) {
     if (!klines || klines.length === 0) {
         return 0;
@@ -534,25 +640,6 @@ function calculateVwap(klines) {
     });
 
     return cumulativeVolume > 0 ? cumulativeTypicalPriceVolume / cumulativeVolume : 0;
-}
-
-function calculateRelativeStrength(symbolKlines, btcKlines) {
-    if (!symbolKlines || symbolKlines.length < 2 || !btcKlines || btcKlines.length < 2) {
-        return null;
-    }
-    const symbolOpen = parseFloat(symbolKlines[0][1]);
-    const symbolClose = parseFloat(symbolKlines[symbolKlines.length - 1][4]);
-    const btcOpen = parseFloat(btcKlines[0][1]);
-    const btcClose = parseFloat(btcKlines[btcKlines.length - 1][4]);
-
-    if (symbolOpen === 0 || btcOpen === 0) return null;
-
-    const symbolChange = ((symbolClose - symbolOpen) / symbolOpen) * 100;
-    const btcChange = ((btcClose - btcOpen) / btcOpen) * 100;
-
-    if (btcChange === 0) return symbolChange > 0 ? 100 : 0;
-
-    return (symbolChange / btcChange);
 }
 
 function calculateDivVectorConvictionScore(divVectors) {
@@ -629,6 +716,7 @@ function calculateOiConvictionScore(oiChanges) {
         openInterestChange4h: 5,
         openInterestChange12h: 6,
         openInterestChange24h: 7,
+        openInterestChange48h: 8,
     };
 
     const maxScore = Object.values(weights).reduce((a, b) => a + b, 0);
@@ -674,49 +762,6 @@ function calculateAlphaDivergence(topData, globalData, oiConvictionScore) {
     return divergence;
 }
 
-function calculateMomentumIndex(change15m, oiChange1m, oiChange5m) {
-    let score = 50;
-    const c15m = parseFloat(change15m);
-
-    if (!isNaN(c15m)) {
-        if (c15m > 0.02) score += 10;
-        else if (c15m < -0.02) score -= 10;
-    }
-
-    if (oiChange5m > 1000000) {
-        score += 15;
-    } else if (oiChange5m < -1000000) {
-        score -= 15;
-    }
-
-    // Apply OI as a multiplier for conviction
-    if (oiChange1m > 0) {
-        const deviation = (score - 50) * 1.2; // Amplify the deviation from neutral
-        score = 50 + deviation;
-    } else if (oiChange1m < 0) {
-        const deviation = (score - 50) * 0.8; // Dampen the deviation
-        score = 50 + deviation;
-    }
-
-    return Math.max(0, Math.min(100, Math.round(score)));
-}
-
-function calculateSignalStrength(symbol, lsTopRatioChange, currentRatio) {
-    const change = parseFloat(lsTopRatioChange);
-    let signal = 'Neutral';
-
-    if (change > 0.05) {
-        signal = 'Strong Buy';
-    } else if (change > 0.02) {
-        signal = 'Weak Buy';
-    } else if (change < -0.05) {
-        signal = 'Strong Sell';
-    } else if (change < -0.02) {
-        signal = 'Weak Sell';
-    }
-
-    return signal;
-}
 
 function calculateWhaleSentiment(symbols) {
     let bullishCount = 0;
@@ -741,7 +786,7 @@ function calculateWhaleSentiment(symbols) {
 }
 
 
-const PORT = process.env.PORT || 5017;
+const PORT = process.env.PORT || 5019;
 server.listen(PORT, () => {
     console.log(`Server is listening on port ${PORT}`);
     paperTrader.loadPortfolio();

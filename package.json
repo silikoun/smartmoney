@@ -23,5 +23,8 @@
     "sak": "file:../sak",
     "winston": "^3.17.0",
     "ws": "^8.2.3"
+  },
+  "devDependencies": {
+    "@stagewise/toolbar": "^0.4.9"
   }
 }
