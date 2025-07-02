@@ -48,9 +48,19 @@ function initialize() {
     });
 
     fetch('/api/config')
-        .then(response => response.json())
-        .then(data => {
-            config = data;
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.text();
+        })
+        .then(text => {
+            try {
+                config = JSON.parse(text);
+            } catch (error) {
+                console.error('Error parsing config JSON:', error);
+                console.error('Received text:', text);
+            }
         })
         .catch(error => console.error('Error fetching config:', error));
 
