@@ -471,6 +471,7 @@ const fetchAllDataForSymbol = async (symbol) => {
         divergenceVector4h,
     });
 
+    const fundingRateValue = funding_rate_data && funding_rate_data[0] ? parseFloat(funding_rate_data[0].lastFundingRate) * 100 : null;
     const data = {
         symbol,
         aiScore,
@@ -516,10 +517,10 @@ const fetchAllDataForSymbol = async (symbol) => {
         volumeChange4h: (volumeChange4h / 1000000).toFixed(2) + 'M',
         volumeChange12h: (volumeChange12h / 1000000).toFixed(2) + 'M',
         volumeChange24h: (volumeChange24h / 1000000).toFixed(2) + 'M',
-        fundingRate: funding_rate_data && funding_rate_data[0] ? parseFloat(funding_rate_data[0].lastFundingRate).toFixed(4) : 'N/A',
-        fundingRate1h: calculateFundingRateVariation(funding_rate_hist_data, 1),
-        fundingRate4h: calculateFundingRateVariation(funding_rate_hist_data, 4),
-        fundingRate24h: calculateFundingRateVariation(funding_rate_hist_data, 24),
+        fundingRate: fundingRateValue ? fundingRateValue.toFixed(4) : 'N/A',
+        fundingRateChange1h: calculateFundingRateVariation(funding_rate_hist_data, 1),
+        fundingRateChange4h: calculateFundingRateVariation(funding_rate_hist_data, 4),
+        fundingRateChange24h: calculateFundingRateVariation(funding_rate_hist_data, 24),
         fundingRateSuggestion: getFundingRateSuggestion(funding_rate_data),
         lsGlobalAccountRatio: ls_global_account_ratio_data && ls_global_account_ratio_data[0] ? parseFloat(ls_global_account_ratio_data[0].longShortRatio).toFixed(4) : 'N/A',
         lsGlobalAccountRatioChange5m,
@@ -583,9 +584,9 @@ function calculateFundingRateVariation(data, hours) {
     if (!pastRateEntry) return 'N/A'; // Not enough historical data
 
     const pastRate = parseFloat(pastRateEntry.fundingRate);
-    if (isNaN(pastRate)) return 'N/A';
+    if (isNaN(pastRate) || pastRate === 0) return 'N/A';
 
-    return ((latestRate - pastRate) * 100).toFixed(4);
+    return (((latestRate - pastRate) / pastRate) * 100).toFixed(2);
 }
 
 function getFundingRateSuggestion(data) {
