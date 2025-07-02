@@ -321,10 +321,10 @@ function buildRowHTML(data, activeTab) {
         relativeStrength4h: () => `<td class="${cellClasses} text-gray-500">${data.relativeStrength4h}</td>`,
         relativeStrength1h: () => `<td class="${cellClasses} text-gray-500">${data.relativeStrength1h}</td>`,
         timestamp: () => `<td class="${cellClasses} text-gray-400">${data.timestamp}</td>`,
-        fundingRate: () => `<td class="${cellClasses}">${formatChangeCell(data.fundingRate)}</td>`,
-        fundingRate1h: () => `<td class="${cellClasses}">${formatChangeCell(data.fundingRate1h)}</td>`,
-        fundingRate4h: () => `<td class="${cellClasses}">${formatChangeCell(data.fundingRate4h)}</td>`,
-        fundingRate24h: () => `<td class="${cellClasses}">${formatChangeCell(data.fundingRate24h)}</td>`,
+        fundingRate: () => `<td class="${cellClasses}">${formatChangeCell(data.fundingRate, '%')}</td>`,
+        fundingRateChange1h: () => `<td class="${cellClasses}">${formatChangeCell(data.fundingRateChange1h, '%')}</td>`,
+        fundingRateChange4h: () => `<td class="${cellClasses}">${formatChangeCell(data.fundingRateChange4h, '%')}</td>`,
+        fundingRateChange24h: () => `<td class="${cellClasses}">${formatChangeCell(data.fundingRateChange24h, '%')}</td>`,
         fundingRateSuggestion: () => `<td class="${cellClasses}"><div class="text-center px-2 py-0.5 text-xs font-bold rounded ${getSignalClass(data.fundingRateSuggestion)}">${data.fundingRateSuggestion}</div></td>`
     };
 
