@@ -309,8 +309,14 @@ wss.on('connection', (ws, req) => {
             console.log('Indicator client disconnected');
             clearTimeout(timeoutId);
         });
-    } else if (url.pathname === '/ws') {
+    } else if (url.pathname === '/ws' || url.pathname === '/') {
         console.log('Main client connected');
+        // Send all data from cache on connection
+        Object.values(cache).forEach(cachedItem => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(cachedItem.data));
+            }
+        });
         ws.on('close', () => {
             console.log('Main client disconnected');
         });
@@ -858,6 +864,3 @@ function calculateWhaleSentiment(symbols) {
 
 
 const PORT = process.env.PORT || 8080;
-server.listen(PORT, () => {
-    console.log(`Server is listening on port ${PORT}`);
-});
