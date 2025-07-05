@@ -1,7 +1,7 @@
 const tableBody = document.getElementById('data-table-body');
 const socketProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 const socketHost = window.location.hostname === 'localhost' ? 'localhost:8080' : window.location.host;
-const socket = new WebSocket(`${socketProtocol}//${socketHost}`);
+const socket = new WebSocket(`${socketProtocol}//${socketHost}/ws`);
 const customizeBtn = document.getElementById('customize-btn');
 const customizePanel = document.getElementById('customize-panel');
 const customizeCheckboxes = document.getElementById('customize-checkboxes');
