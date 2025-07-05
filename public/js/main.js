@@ -45,7 +45,7 @@ function initialize() {
     const darkIcon = document.getElementById('theme-toggle-dark-icon');
     const lightIcon = document.getElementById('theme-toggle-light-icon');
 
-    if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    if (localStorage.getItem('color-theme') === 'dark') {
         document.documentElement.classList.add('dark');
         lightIcon.classList.remove('hidden');
     } else {
