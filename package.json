@@ -4,8 +4,8 @@
   "description": "A Node.js application to display Binance Futures data.",
   "main": "server.js",
   "scripts": {
-    "start": "concurrently \"node server.js\" \"node indicators-server.js\"",
-    "dev": "concurrently \"node server.js\" \"node indicators-server.js\"",
+    "start": "npm run build:css && concurrently \"node server.js\" \"node indicators-server.js\"",
+    "dev": "npm run build:css && concurrently \"node server.js\" \"node indicators-server.js\"",
     "build:css": "node build-css.js",
     "gcp-build": "npm run build:css"
   },

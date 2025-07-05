@@ -4,7 +4,56 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Top Position Trader</title>
-    <link href="/css/styles.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            // You can extend colors here if needed
+          }
+        }
+      }
+    }
+  </script>
+    <style type="text/tailwindcss">
+        @layer base {
+            body {
+                background-color: #FFFFFF;
+                color: #131722;
+                font-family: sans-serif;
+            }
+            thead th {
+                position: -webkit-sticky; /* for Safari */
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                background-color: #F1F5F9;
+                color: #64748B;
+            }
+            tbody tr:nth-child(even) {
+                background-color: #F9FAFB;
+            }
+            tbody tr:hover {
+                background-color: #F8FAFC;
+            }
+        }
+        .soon-badge {
+            font-size: 0.6rem;
+            padding: 0.1rem 0.3rem;
+            border-radius: 0.25rem;
+            background-color: #ef4444;
+            color: white;
+            margin-left: 0.4rem;
+            text-transform: uppercase;
+            font-weight: bold;
+            line-height: 1;
+        }
+        .nav-item-soon {
+            color: #9ca3af;
+            cursor: not-allowed;
+        }
+    </style>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/peity/3.3.0/jquery.peity.min.js"></script>
 </head>

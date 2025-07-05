@@ -4,11 +4,11 @@ const path = require('path');
 const WebSocket = require('ws');
 const axios = require('axios');
 const logger = require('./logger');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
-const fs = require('fs');
 
 const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
 let isPaused = false;
@@ -181,6 +181,32 @@ const broadcast = (data) => {
     });
 };
 
+const getSymbolsWithRetry = async (retries = 5, initialDelay = 5000) => {
+    let delay = initialDelay;
+    for (let i = 0; i < retries; i++) {
+        try {
+            const endpoint = 'https://fapi.binance.com/fapi/v1/exchangeInfo';
+            const data = await getBinanceData(null, endpoint);
+            if (data && data.symbols) {
+                console.log('Successfully fetched symbols.');
+                return data.symbols
+                    .filter(s => s.status === 'TRADING' && s.symbol.endsWith('USDT'))
+                    .map(s => s.symbol);
+            }
+        } catch (error) {
+            console.error(`Attempt ${i + 1} to fetch symbols failed:`, error.message);
+        }
+        
+        if (i < retries - 1) {
+            console.log(`Retrying to fetch symbols in ${delay / 1000} seconds...`);
+            await new Promise(res => setTimeout(res, delay));
+            delay *= 2; // Exponential backoff
+        }
+    }
+    console.error('Could not fetch symbols after multiple retries.');
+    return null;
+};
+
 const startDataFetching = async () => {
     let isProcessing = false;
 
@@ -237,32 +263,6 @@ wss.on('connection', (ws) => {
         console.log('Client disconnected');
     });
 });
-
-const getSymbolsWithRetry = async (retries = 5, initialDelay = 5000) => {
-    let delay = initialDelay;
-    for (let i = 0; i < retries; i++) {
-        try {
-            const endpoint = 'https://fapi.binance.com/fapi/v1/exchangeInfo';
-            const data = await getBinanceData(null, endpoint);
-            if (data && data.symbols) {
-                console.log('Successfully fetched symbols.');
-                return data.symbols
-                    .filter(s => s.status === 'TRADING' && s.symbol.endsWith('USDT'))
-                    .map(s => s.symbol);
-            }
-        } catch (error) {
-            console.error(`Attempt ${i + 1} to fetch symbols failed:`, error.message);
-        }
-        
-        if (i < retries - 1) {
-            console.log(`Retrying to fetch symbols in ${delay / 1000} seconds...`);
-            await new Promise(res => setTimeout(res, delay));
-            delay *= 2; // Exponential backoff
-        }
-    }
-    console.error('Could not fetch symbols after multiple retries.');
-    return null;
-};
 
 const fetchAllDataForSymbol = async (symbol) => {
     const now = Date.now();
