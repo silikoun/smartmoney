@@ -2,16 +2,11 @@ runtime: nodejs20
 entrypoint: npm start
 
 handlers:
-  # Route API requests to the Node.js application.
-- url: /api/.*
+- url: /css
+  static_dir: public/css
+
+- url: /js
+  static_dir: public/js
+
+- url: /.*
   script: auto
-
-  # Serve static files from the public directory.
-- url: /(.*)
-  static_files: public/\1
-  upload: public/(.*)
-
-  # Catch-all for the root path, serving index.html.
-- url: /
-  static_files: public/index.html
-  upload: public/index.html
