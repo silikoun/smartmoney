@@ -1,14 +1,6 @@
 runtime: nodejs22
 env: flex
 
-# Add health check for instance health monitoring
-health_check:
-  enable_health_check: true
-  check_interval_sec: 5
-  timeout_sec: 4
-  unhealthy_threshold: 2
-  healthy_threshold: 2
-
 # Add network settings for WebSocket support
 network:
   name: default
@@ -26,6 +18,13 @@ readiness_check:
   failure_threshold: 2
   success_threshold: 2
   app_start_timeout_sec: 300
+
+liveness_check:
+  path: "/readiness"
+  check_interval_sec: 5
+  timeout_sec: 4
+  failure_threshold: 2
+  success_threshold: 2
 
 # Reduce resources to stay within free tier
 resources:
