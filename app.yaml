@@ -1,10 +1,10 @@
 runtime: nodejs20
 entrypoint: npm start
 
-handlers:
-- url: /css
-  static_dir: public/css
+network:
+  session_affinity: true
 
+handlers:
 - url: /js
   static_dir: public/js
 
