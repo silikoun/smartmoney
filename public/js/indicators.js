@@ -1,5 +1,7 @@
 const tableBody = document.getElementById('data-table-body');
-const socket = new WebSocket('ws://localhost:5018');
+const socketProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const socketHost = window.location.hostname === 'localhost' ? 'localhost:5018' : window.location.host;
+const socket = new WebSocket(`${socketProtocol}//${socketHost}/indicators`);
 const tableHeaders = document.getElementById('table-headers');
 
 let allData = [];

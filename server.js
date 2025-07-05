@@ -257,11 +257,59 @@ const startDataFetching = async () => {
 
 startDataFetching();
 
-wss.on('connection', (ws) => {
-    console.log('Client connected');
-    ws.on('close', () => {
-        console.log('Client disconnected');
-    });
+wss.on('connection', (ws, req) => {
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    if (url.pathname === '/indicators') {
+        console.log('Indicator client connected');
+        let isProcessing = false;
+        let timeoutId;
+
+        const processSymbols = async () => {
+            if (isProcessing) {
+                return;
+            }
+            isProcessing = true;
+
+            try {
+                const symbols = await getSymbolsWithRetry();
+                if (!symbols) {
+                    ws.send(JSON.stringify({ error: 'Could not fetch symbols' }));
+                    isProcessing = false;
+                    return;
+                }
+                const delay = 60000 / symbols.length;
+
+                for (const symbol of symbols) {
+                    try {
+                        const data = await fetchAllDataForSymbol(symbol);
+                        if (data && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify(data));
+                        }
+                    } catch (error) {
+                        console.error(`Failed to process symbol ${symbol} for indicators:`, error);
+                    }
+                    await new Promise(res => setTimeout(res, delay));
+                }
+            } finally {
+                isProcessing = false;
+                if (ws.readyState === WebSocket.OPEN) {
+                    timeoutId = setTimeout(processSymbols, 1000);
+                }
+            }
+        };
+
+        processSymbols();
+
+        ws.on('close', () => {
+            console.log('Indicator client disconnected');
+            clearTimeout(timeoutId);
+        });
+    } else {
+        console.log('Client connected');
+        ws.on('close', () => {
+            console.log('Client disconnected');
+        });
+    }
 });
 
 const fetchAllDataForSymbol = async (symbol) => {
