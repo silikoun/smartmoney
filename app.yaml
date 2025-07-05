@@ -11,5 +11,10 @@ handlers:
 - url: /ws
   script: auto
 
+- url: /
+  static_files: public/index.html
+  upload: public/index.html
+  expiration: "0s" # Force no caching for index.html
+
 - url: /.*
   script: auto
