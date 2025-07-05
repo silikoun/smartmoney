@@ -7,6 +7,7 @@ const socket = new WebSocket(
 );
 const customizeBtn = document.getElementById('customize-btn');
 const customizePanel = document.getElementById('customize-panel');
+const closeCustomizePanelBtn = document.getElementById('close-customize-panel');
 const customizeCheckboxes = document.getElementById('customize-checkboxes');
 const tableHeaders = document.getElementById('table-headers');
 const exportBtn = document.getElementById('export-btn');
@@ -21,6 +22,8 @@ const marketTypeFuturesBtn = document.getElementById('market-type-futures');
 const marketTypeSpotBtn = document.getElementById('market-type-spot');
 const mobileMenuBtn = document.getElementById('mobile-menu-btn');
 const mobileMenuPanel = document.getElementById('mobile-menu-panel');
+const mobileCustomizePanel = document.getElementById('mobile-customize-panel');
+const closeMobileCustomizePanelBtn = document.getElementById('close-mobile-customize-panel');
 const mobileCustomizeCheckboxes = document.getElementById('mobile-customize-checkboxes');
 const mobileExportBtn = document.getElementById('mobile-export-btn');
 
@@ -104,6 +107,9 @@ function initialize() {
         if (customizePanel && !customizePanel.classList.contains('hidden') && !customizeBtn.contains(event.target) && !customizePanel.contains(event.target)) {
             customizePanel.classList.add('hidden');
         }
+        if (mobileCustomizePanel && !mobileCustomizePanel.classList.contains('hidden') && customizeBtn && !customizeBtn.contains(event.target) && !mobileCustomizePanel.contains(event.target) && event.target !== mobileCustomizePanel) {
+            mobileCustomizePanel.classList.add('hidden');
+        }
         if (mobileMenuPanel && !mobileMenuPanel.classList.contains('hidden') && !mobileMenuBtn.contains(event.target) && !mobileMenuPanel.contains(event.target)) {
             mobileMenuPanel.classList.add('hidden');
         }
@@ -151,6 +157,20 @@ function showTab(tabId) {
     const tabs = document.querySelectorAll('[data-tabs-target]');
     const openInterestTable = document.getElementById('open-interest-table-body').parentElement.parentElement;
     const mainTable = document.getElementById('data-table-body').parentElement;
+
+    const titles = {
+        'overview': 'Crypto Futures Market Overview | TopTrader',
+        'open-interest': 'Open Interest | Crypto Futures Data | TopTrader',
+        'notional': 'Notional Value | Crypto Futures Data | TopTrader',
+        'volume': 'Volume | Crypto Futures Data | TopTrader',
+        'position': 'Long/Short Position | Crypto Futures Data | TopTrader',
+        'long-short-accounts': 'Long/Short Accounts | Crypto Futures Data | TopTrader',
+        'divergence': 'Divergence Analysis | Crypto Futures Data | TopTrader',
+        'funding-rate': 'Funding Rate | Crypto Futures Data | TopTrader',
+        'oi-weighted-funding-rate': 'OI-Weighted Funding Rate | TopTrader'
+    };
+
+    document.title = titles[tabId] || 'Top Position Trader';
 
     tabs.forEach(tab => {
         const target = tab.getAttribute('data-tabs-target').replace('#', '');
@@ -318,12 +338,57 @@ function setupColumnCustomization() {
         const activeTab = document.querySelector('[data-tabs-target][aria-selected="true"]').getAttribute('data-tabs-target').replace('#', '');
         localStorage.setItem(`visibleColumns_${activeTab}`, JSON.stringify(visibleColumns));
         renderTable();
+        // Also update the mobile checkboxes
+        const mobileCheckbox = document.querySelector(`#mobile-customize-checkboxes input[data-column="${columnKey}"]`);
+        if (mobileCheckbox) {
+            mobileCheckbox.checked = checkbox.checked;
+        }
     });
 
-    customizeBtn.addEventListener('click', (event) => {
-        event.stopPropagation();
-        customizePanel.classList.toggle('hidden');
-    });
+    if (mobileCustomizeCheckboxes) {
+        mobileCustomizeCheckboxes.addEventListener('change', (event) => {
+            const checkbox = event.target;
+            const columnKey = checkbox.dataset.column;
+            visibleColumns[columnKey] = checkbox.checked;
+            const activeTab = document.querySelector('[data-tabs-target][aria-selected="true"]').getAttribute('data-tabs-target').replace('#', '');
+            localStorage.setItem(`visibleColumns_${activeTab}`, JSON.stringify(visibleColumns));
+            renderTable();
+            // Also update the desktop checkboxes
+            const desktopCheckbox = document.querySelector(`#customize-checkboxes input[data-column="${columnKey}"]`);
+            if (desktopCheckbox) {
+                desktopCheckbox.checked = checkbox.checked;
+            }
+        });
+    }
+
+    if (customizeBtn) {
+        customizeBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            if (window.innerWidth < 768) {
+                if (mobileCustomizePanel) {
+                    mobileCustomizePanel.classList.toggle('hidden');
+                }
+            } else {
+                if (customizePanel) {
+                    customizePanel.classList.toggle('hidden');
+                }
+            }
+        });
+    }
+
+    if (closeCustomizePanelBtn) {
+        closeCustomizePanelBtn.addEventListener('click', () => {
+            customizePanel.classList.add('hidden');
+        });
+    }
+
+    if (closeMobileCustomizePanelBtn) {
+        closeMobileCustomizePanelBtn.addEventListener('click', () => {
+            if (mobileCustomizePanel) {
+                mobileCustomizePanel.classList.add('hidden');
+            }
+        });
+    }
 }
 
 // --- Rendering ---

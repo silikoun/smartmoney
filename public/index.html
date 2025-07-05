@@ -95,9 +95,8 @@
             </div>
 
             <!-- Bottom Screener Bar -->
-            <div class="flex items-center justify-between px-4 py-2 border-t border-gray-200">
-                <!-- Left: Market & Platform Selectors -->
-                <div class="flex items-center space-x-4">
+            <div class="flex flex-wrap items-center justify-between px-4 py-2 border-t border-gray-200 gap-y-4">
+                <div class="flex flex-wrap items-center gap-4">
                     <div class="flex items-center border border-gray-300 rounded-md">
                         <button id="market-type-futures" class="px-3 py-1.5 text-sm font-semibold bg-gray-200 text-gray-800 rounded-l-md">Futures</button>
                         <button id="market-type-spot" class="px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100 rounded-r-md">Spot</button>
@@ -115,80 +114,80 @@
                     </div>
                 </div>
                 
-                <!-- Center: Market Sentiment -->
-                <div id="market-sentiment" class="hidden md:flex items-center space-x-6">
-                    <div id="sentiment-btc" class="flex items-center space-x-2 text-sm"><span class="font-semibold">BTC:</span><span class="text-gray-600">Loading...</span></div>
-                    <div id="sentiment-eth" class="flex items-center space-x-2 text-sm"><span class="font-semibold">ETH:</span><span class="text-gray-600">Loading...</span></div>
-                </div>
-            
-                <!-- Right side: Search and Actions -->
-                <div class="flex items-center space-x-3">
-                    <div class="relative">
-                        <input type="text" id="search-coin-input" placeholder="Search..." class="pl-10 pr-4 py-1.5 text-sm border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 w-40">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></div>
-                        <button id="search-coin-btn" class="hidden">Search</button>
+                <div class="flex flex-wrap items-center gap-4">
+                    <div id="market-sentiment" class="hidden md:flex items-center space-x-6">
+                        <div id="sentiment-btc" class="flex items-center space-x-2 text-sm"><span class="font-semibold">BTC:</span><span class="text-gray-600">Loading...</span></div>
+                        <div id="sentiment-eth" class="flex items-center space-x-2 text-sm"><span class="font-semibold">ETH:</span><span class="text-gray-600">Loading...</span></div>
                     </div>
-                    <a href="/indicators" class="px-4 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition">Indicators</a>
-                    <div class="relative">
-                        <button id="customize-btn" class="flex items-center space-x-2 px-3 py-1.5 text-sm bg-gray-100 text-gray-800 rounded-md hover:bg-gray-200 transition">
-                            <span>Customize</span>
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </button>
-                        <div id="customize-panel" class="hidden absolute right-0 mt-2 w-96 bg-white border border-gray-200 rounded-lg shadow-lg z-30 p-4">
-                            <h3 class="text-lg font-semibold mb-3 text-gray-800">Visible Columns</h3>
-                            <div id="customize-checkboxes" class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <h4 class="font-semibold text-sm mb-2">Overview</h4>
-                                    <div id="overview-columns"></div>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-sm mb-2">Divergence</h4>
-                                    <div id="divergence-columns"></div>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-sm mb-2">Notional</h4>
-                                    <div id="notional-columns"></div>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-sm mb-2">Volume</h4>
-                                    <div id="volume-columns"></div>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-sm mb-2">L/S Position</h4>
-                                    <div id="position-columns"></div>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-sm mb-2">L/S (Accounts)</h4>
-                                    <div id="long-short-accounts-columns"></div>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-sm mb-2">Funding Rate</h4>
-                                    <div id="funding-rate-columns"></div>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-sm mb-2">OI-Weighted FR</h4>
-                                    <div id="oi-weighted-funding-rate-columns"></div>
+                
+                    <div class="flex items-center space-x-3">
+                        <div class="relative">
+                            <input type="text" id="search-coin-input" placeholder="Search..." class="pl-10 pr-4 py-1.5 text-sm border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 w-40">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></div>
+                            <button id="search-coin-btn" class="hidden">Search</button>
+                        </div>
+                        <a href="/indicators" class="px-4 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition">Indicators</a>
+                        <div class="relative">
+                            <button id="customize-btn" class="flex items-center space-x-2 px-3 py-1.5 text-sm bg-gray-100 text-gray-800 rounded-md hover:bg-gray-200 transition">
+                                <span class="hidden md:inline">Customize</span>
+                                <svg class="w-5 h-5 md:hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <svg class="w-4 h-4 hidden md:inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            <div id="customize-panel" class="hidden absolute right-0 mt-2 w-96 bg-white border border-gray-200 rounded-lg shadow-lg z-30 p-4">
+                                <h3 class="text-lg font-semibold mb-3 text-gray-800">Visible Columns</h3>
+                                <div id="customize-checkboxes" class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <h4 class="font-semibold text-sm mb-2">Overview</h4>
+                                        <div id="overview-columns"></div>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-sm mb-2">Divergence</h4>
+                                        <div id="divergence-columns"></div>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-sm mb-2">Notional</h4>
+                                        <div id="notional-columns"></div>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-sm mb-2">Volume</h4>
+                                        <div id="volume-columns"></div>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-sm mb-2">L/S Position</h4>
+                                        <div id="position-columns"></div>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-sm mb-2">L/S (Accounts)</h4>
+                                        <div id="long-short-accounts-columns"></div>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-sm mb-2">Funding Rate</h4>
+                                        <div id="funding-rate-columns"></div>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-sm mb-2">OI-Weighted FR</h4>
+                                        <div id="oi-weighted-funding-rate-columns"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="relative">
-                        <button id="more-actions-btn" class="p-2 text-gray-600 bg-gray-100 rounded-full hover:bg-gray-200 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg></button>
-                        <div id="more-actions-panel" class="hidden absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
-                            <button id="export-btn" class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Export to CSV</button>
-                            <button class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">MCP <span class="soon-badge">Soon</span></button>
+                        <div class="relative">
+                            <button id="more-actions-btn" class="p-2 text-gray-600 bg-gray-100 rounded-full hover:bg-gray-200 transition flex items-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg></button>
+                            <div id="more-actions-panel" class="hidden absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+                                <button id="export-btn" class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Export to CSV</button>
+                                <button class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">MCP <span class="soon-badge">Soon</span></button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </header>
                 </div>
             </div>
         </header>
 
         <!-- Main Content -->
         <main class="p-4">
->>>>>>> Stashed changes
             <div class="mb-4 border-b border-gray-200">
                 <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" id="myTab" data-tabs-toggle="#myTabContent" role="tablist">
                     <li class="mr-2" role="presentation"><button class="inline-block p-4 border-b-2 rounded-t-lg" id="overview-tab" data-tabs-target="#overview" type="button" role="tab" aria-controls="overview" aria-selected="true">Overview</button></li>
@@ -294,5 +293,59 @@
     </div>
 
     <script src="js/main.js?v=3"></script>
+
+    <!-- Mobile Customize Panel -->
+    <div id="mobile-customize-panel" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center pb-3">
+                <p class="text-2xl font-bold">Customize Columns</p>
+                <button id="close-mobile-customize-panel" class="cursor-pointer z-50">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div id="mobile-customize-checkboxes" class="grid grid-cols-1 gap-4">
+                <!-- Checkboxes will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
 </body>
 </html>
+<environment_details>
+# VSCode Visible Files
+public/index.html
+
+# VSCode Open Tabs
+.vscode/extensions.json
+public/css/styles.css
+tailwind.config.js
+build-css.js
+public/css/input.css
+indicators-server.js
+public/funding-rate.html
+public/js/funding-rate.js
+public/js/oi-weighted-funding-rate.js
+public/indicators.html
+public/oi-weighted-funding-rate.html
+public/liquidation-cluster.html
+config.json
+.gcloudignore
+paper-trader.js
+package.json
+public/js/indicators.js
+Dockerfile
+.dockerignore
+app.yaml
+cloudbuild.yaml
+server.js
+public/js/main.js
+public/index.html
+
+# Current Time
+7/5/2025, 9:34:28 PM (Africa/Casablanca, UTC+1:00)
+
+# Context Window Usage
+371,114 / 1,048.576K tokens used (35%)
+
+# Current Mode
+ACT MODE
+</environment_details>

@@ -1,3 +1,4 @@
+// --- Imports ---
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
@@ -6,33 +7,44 @@ const axios = require('axios');
 const logger = require('./logger');
 const fs = require('fs');
 
+// --- Server Setup ---
 const app = express();
+// Create an HTTP server that can handle both Express and WebSocket traffic
 const server = http.createServer((req, res) => {
+  // Health check endpoint for cloud environments
   if (req.url === '/readiness') {
     res.writeHead(200);
     return res.end('OK');
   }
-  // Pass other requests to Express
+  // Pass other requests to the Express app
   app(req, res);
 });
+// Create a WebSocket server and attach it to the HTTP server
 const wss = new WebSocket.Server({ server, path: '/ws' });
 
+// --- WebSocket Connection Handling ---
 wss.on('connection', ws => {
     console.log('Client connected');
+
+    // This is a simple echo for testing purposes.
     ws.on('message', (message) => {
         console.log(`Received: ${message}`);
         ws.send(`Echo: ${message}`);
     });
-    // Send cached data to the new client
+
+    // When a new client connects, send them the currently cached data.
     const data = Object.values(cache).map(item => item.data);
     if (data.length > 0) {
         ws.send(JSON.stringify(data));
     }
+
     ws.on('close', () => {
         console.log('Client disconnected');
     });
 });
 
+// --- WebSocket Broadcasting ---
+// Function to send data to all connected clients.
 wss.broadcast = function broadcast(data) {
     wss.clients.forEach(function each(client) {
         if (client.readyState === WebSocket.OPEN) {
@@ -41,12 +53,15 @@ wss.broadcast = function broadcast(data) {
     });
 };
 
+// --- Configuration and Globals ---
 const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
-let isPaused = false;
+let isPaused = false; // Flag to pause API requests if IP is blocked
 
-const cache = {};
-const CACHE_DURATION_SECONDS = 60;
+const cache = {}; // In-memory cache for API data
+const CACHE_DURATION_SECONDS = 60; // How long to cache data for
 
+// --- Express Middleware and Routes ---
+// Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', (req, res) => {
@@ -124,9 +139,11 @@ app.get('/api/data', (req, res) => {
     res.json(data);
 });
 
+// --- Binance API Data Fetching ---
+// Generic function to fetch data from Binance API with error handling.
 const getBinanceData = async (symbol, endpoint, params = {}) => {
     if (isPaused) {
-        return null;
+        return null; // Don't make requests if we're in a cooldown period
     }
     try {
         const requestParams = { ...params };
@@ -136,11 +153,13 @@ const getBinanceData = async (symbol, endpoint, params = {}) => {
         const res = await axios.get(endpoint, { params: requestParams, timeout: 30000 });
         return res.data;
     } catch (error) {
+        // Handle common network errors gracefully
         if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
             console.warn(`Request for ${symbol ? symbol : 'all symbols'} on ${endpoint} timed out. Will retry next cycle.`);
         } else if (error.code === 'ECONNRESET' || error.code === 'EAI_AGAIN') {
             console.warn(`Socket issue for ${symbol ? symbol : 'all symbols'} on ${endpoint}. Will retry next cycle.`);
         } else if (error.response && (error.response.status === 418 || error.response.status === 403)) {
+            // Handle IP ban from Binance
             const cooldownMinutes = config.ip_blacklist_cooldown_minutes || 10;
             console.warn(`IP address has been blocked by Binance API. Pausing requests for ${cooldownMinutes} minutes.`);
             isPaused = true;
@@ -235,8 +254,9 @@ const getSymbolsWithRetry = async (retries = 5, initialDelay = 5000) => {
     return null;
 };
 
+// --- Main Data Fetching Loop ---
 const startDataFetching = async () => {
-    let isProcessing = false;
+    let isProcessing = false; // A lock to prevent multiple loops from running at once
 
     const processSymbols = async () => {
         if (isProcessing) {
@@ -246,6 +266,7 @@ const startDataFetching = async () => {
         isProcessing = true;
 
         try {
+            // 1. Get all available symbols from Binance
             const allSymbols = await getSymbolsWithRetry();
             if (!allSymbols) {
                 console.error('Could not fetch symbols after multiple retries. Please check server connection and restart.');
@@ -253,8 +274,10 @@ const startDataFetching = async () => {
                 return;
             }
 
-            const delay = 60000 / allSymbols.length; // Stagger requests over one minute
+            // 2. Stagger the API requests to avoid hitting rate limits
+            const delay = 60000 / allSymbols.length; 
 
+            // 3. Loop through each symbol and fetch all its data
             for (const symbol of allSymbols) {
                 try {
                     await fetchAllDataForSymbol(symbol);
@@ -264,12 +287,14 @@ const startDataFetching = async () => {
                 await new Promise(res => setTimeout(res, delay));
             }
 
+            // 4. After processing all symbols, calculate the overall market sentiment
             calculateWhaleSentiment(allSymbols);
 
         } finally {
             isProcessing = false;
             console.log('Finished processing all symbols for this cycle.');
-            setTimeout(processSymbols, 1000); // Start next cycle 1s after the previous one finishes
+            // 5. Start the next cycle after a short delay
+            setTimeout(processSymbols, 1000); 
         }
     };
 
@@ -278,14 +303,18 @@ const startDataFetching = async () => {
 
 startDataFetching();
 
+// --- Symbol-Specific Data Fetching and Processing ---
 const fetchAllDataForSymbol = async (symbol) => {
     const now = Date.now();
+    // 1. Check if we have fresh data in the cache
     if (cache[symbol] && (now - cache[symbol].timestamp) < CACHE_DURATION_SECONDS * 1000) {
-        // console.log(`[CACHE HIT] Serving ${symbol} from cache.`);
+        console.log(`[CACHE HIT] Serving ${symbol} from cache.`);
         return;
     }
 
     console.log(`[CACHE MISS] Fetching ${symbol} from API.`);
+    
+    // 2. Define all the Binance API endpoints we need
     const open_interest_endpoint = 'https://fapi.binance.com/fapi/v1/openInterest';
     const price_endpoint = 'https://fapi.binance.com/fapi/v1/ticker/price';
     const ls_top_position_endpoint = 'https://fapi.binance.com/futures/data/topLongShortPositionRatio';
@@ -295,6 +324,7 @@ const fetchAllDataForSymbol = async (symbol) => {
     const funding_rate_endpoint = 'https://fapi.binance.com/fapi/v1/premiumIndex';
     const funding_rate_hist_endpoint = 'https://fapi.binance.com/fapi/v1/fundingRate';
 
+    // 3. Fetch all data in parallel for efficiency
     const [
         open_interest_data,
         price_data,
@@ -353,9 +383,11 @@ const fetchAllDataForSymbol = async (symbol) => {
         getBinanceData(symbol, ls_global_position_endpoint, { period: '5m', limit: 1 })
     ]);
 
+    // 4. Process the raw data into a structured format
     const price = price_data ? parseFloat(price_data.price) : 0;
     const openInterestInUSD = open_interest_data && price ? (parseFloat(open_interest_data.openInterest) * price) : 0;
 
+    // 5. Filter out symbols with low open interest
     if (openInterestInUSD < config.minimum_open_interest_usd) {
         return null;
     }
@@ -541,11 +573,13 @@ const fetchAllDataForSymbol = async (symbol) => {
         lsGlobalAccountRatioChange4h
     };
 
+    // 6. Store the processed data in the cache
     cache[symbol] = {
         timestamp: Date.now(),
         data: data
     };
 
+    // 7. Broadcast the new data to all connected clients
     wss.broadcast(data);
 };
 
@@ -799,6 +833,7 @@ function calculateWhaleSentiment(symbols) {
 }
 
 
+// --- Server Initialization ---
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
     console.log(`Server is listening on port ${PORT}`);
