@@ -256,6 +256,8 @@ const getSymbolsWithRetry = async (retries = 5, initialDelay = 5000) => {
 
 // --- Main Data Fetching Loop ---
 const startDataFetching = async () => {
+    await preWarmCache(); // Pre-warm the cache before starting the main loop
+
     let isProcessing = false; // A lock to prevent multiple loops from running at once
 
     const processSymbols = async () => {
@@ -302,6 +304,35 @@ const startDataFetching = async () => {
 };
 
 startDataFetching();
+
+async function preWarmCache() {
+    console.log('Pre-warming cache with top 20 symbols by open interest...');
+    try {
+        const allSymbols = await getSymbolsWithRetry();
+        if (!allSymbols) {
+            console.error('Could not fetch symbols for pre-warming.');
+            return;
+        }
+
+        const openInterestPromises = allSymbols.map(symbol => getBinanceData(symbol, 'https://fapi.binance.com/fapi/v1/openInterest'));
+        const openInterestData = await Promise.all(openInterestPromises);
+
+        const validOIData = openInterestData.filter(d => d && d.openInterest);
+
+        const sortedByOI = validOIData.sort((a, b) => parseFloat(b.openInterest) - parseFloat(a.openInterest));
+        const top20Symbols = sortedByOI.slice(0, 20).map(d => d.symbol);
+
+        console.log('Top 20 symbols to pre-warm:', top20Symbols);
+
+        for (const symbol of top20Symbols) {
+            await fetchAllDataForSymbol(symbol);
+        }
+
+        console.log('Cache pre-warming complete.');
+    } catch (error) {
+        console.error('Error during cache pre-warming:', error);
+    }
+}
 
 // --- Symbol-Specific Data Fetching and Processing ---
 const fetchAllDataForSymbol = async (symbol) => {
@@ -491,6 +522,17 @@ const fetchAllDataForSymbol = async (symbol) => {
     const volumeChange12h = calculateVolumeChange(klines_data_12h);
     const volumeChange24h = calculateVolumeChange(klines_data_1d);
 
+    const calculatePriceChange = (data) => {
+        if (!data || data.length < 2) return 'N/A';
+        const closeNow = parseFloat(data[1][4]);
+        const closeThen = parseFloat(data[0][4]);
+        if (isNaN(closeNow) || isNaN(closeThen) || closeThen === 0) return 'N/A';
+        return (((closeNow - closeThen) / closeThen) * 100).toFixed(2) + '%';
+    };
+
+    const priceChange1h = calculatePriceChange(klines_data_1h);
+    const priceChange24h = calculatePriceChange(klines_data_1d);
+
     const lsConvictionScore = calculateLsConvictionScore({
         lsTopPositionRatioChange15m: lsTopPositionRatioChange15mFrom5m,
         lsTopPositionRatioChange30m,
@@ -558,6 +600,8 @@ const fetchAllDataForSymbol = async (symbol) => {
         volumeChange4h: (volumeChange4h / 1000000).toFixed(2) + 'M',
         volumeChange12h: (volumeChange12h / 1000000).toFixed(2) + 'M',
         volumeChange24h: (volumeChange24h / 1000000).toFixed(2) + 'M',
+        priceChange1h,
+        priceChange24h,
         fundingRate: fundingRateValue ? fundingRateValue.toFixed(4) : 'N/A',
         fundingRateChange15m: calculateFundingRateVariation(funding_rate_hist_data, 0.25),
         fundingRateChange1h: calculateFundingRateVariation(funding_rate_hist_data, 1),

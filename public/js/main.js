@@ -41,6 +41,41 @@ let visibleColumns = {};
 // --- Initialization ---
 
 function initialize() {
+    const darkModeToggle = document.getElementById('dark-mode-toggle');
+    const darkIcon = document.getElementById('theme-toggle-dark-icon');
+    const lightIcon = document.getElementById('theme-toggle-light-icon');
+
+    if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+        lightIcon.classList.remove('hidden');
+    } else {
+        document.documentElement.classList.remove('dark');
+        darkIcon.classList.remove('hidden');
+    }
+
+    darkModeToggle.addEventListener('click', () => {
+        darkIcon.classList.toggle('hidden');
+        lightIcon.classList.toggle('hidden');
+
+        if (localStorage.getItem('color-theme')) {
+            if (localStorage.getItem('color-theme') === 'light') {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('color-theme', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('color-theme', 'light');
+            }
+        } else {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('color-theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('color-theme', 'dark');
+            }
+        }
+    });
+
     sessionStorage.removeItem('mainTableData');
     if (moreActionsBtn) {
         moreActionsBtn.addEventListener('click', (event) => {
@@ -460,6 +495,8 @@ function buildRowHTML(data, activeTab) {
     const cellClasses = 'px-4 py-3 text-xs whitespace-nowrap';
     const cells = {
         price: () => `<td class="${cellClasses}">${data.price}</td>`,
+        priceChange1h: () => `<td class="${cellClasses}">${formatChangeCell(data.priceChange1h)}</td>`,
+        priceChange24h: () => `<td class="${cellClasses}">${formatChangeCell(data.priceChange24h)}</td>`,
         oi: () => `<td class="${cellClasses}">${(data.oi / 1000000).toFixed(2)}M</td>`,
         oi24hNotional: () => `<td class="${cellClasses}">${data.oi24hNotional}</td>`,
         volume24h: () => `<td class="${cellClasses}">${data.volume24h}</td>`,
