@@ -1,4 +1,4 @@
-runtime: nodejs20
+runtime: nodejs22
 env: flex # Use the Flexible Environment for WebSocket support
 
 entrypoint: npm start
