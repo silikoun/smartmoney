@@ -19,6 +19,10 @@ const moreActionsBtn = document.getElementById('more-actions-btn');
 const moreActionsPanel = document.getElementById('more-actions-panel');
 const marketTypeFuturesBtn = document.getElementById('market-type-futures');
 const marketTypeSpotBtn = document.getElementById('market-type-spot');
+const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+const mobileMenuPanel = document.getElementById('mobile-menu-panel');
+const mobileCustomizeCheckboxes = document.getElementById('mobile-customize-checkboxes');
+const mobileExportBtn = document.getElementById('mobile-export-btn');
 
 let currentMarketType = 'futures';
 let tableData = [];
@@ -39,6 +43,13 @@ function initialize() {
         moreActionsBtn.addEventListener('click', (event) => {
             event.stopPropagation();
             moreActionsPanel.classList.toggle('hidden');
+        });
+    }
+
+    if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            mobileMenuPanel.classList.toggle('hidden');
         });
     }
 
@@ -92,6 +103,9 @@ function initialize() {
         }
         if (customizePanel && !customizePanel.classList.contains('hidden') && !customizeBtn.contains(event.target) && !customizePanel.contains(event.target)) {
             customizePanel.classList.add('hidden');
+        }
+        if (mobileMenuPanel && !mobileMenuPanel.classList.contains('hidden') && !mobileMenuBtn.contains(event.target) && !mobileMenuPanel.contains(event.target)) {
+            mobileMenuPanel.classList.add('hidden');
         }
     });
 }
@@ -243,6 +257,9 @@ function populateCustomizeCheckboxes() {
     if (oiWeightedFrContainer) {
         oiWeightedFrContainer.innerHTML = '';
     }
+    if (mobileCustomizeCheckboxes) {
+        mobileCustomizeCheckboxes.innerHTML = '';
+    }
 
 
     headers.forEach(header => {
@@ -273,7 +290,19 @@ function populateCustomizeCheckboxes() {
             
             const container = document.getElementById(`${columnTab}-columns`);
             if(container) {
-                container.appendChild(label);
+                container.appendChild(label.cloneNode(true));
+            }
+            if (mobileCustomizeCheckboxes) {
+                const mobileLabel = document.createElement('label');
+                mobileLabel.className = 'flex items-center space-x-2 text-sm';
+                const mobileCheckbox = document.createElement('input');
+                mobileCheckbox.type = 'checkbox';
+                mobileCheckbox.checked = visibleColumns[columnKey];
+                mobileCheckbox.dataset.column = columnKey;
+                mobileCheckbox.className = 'form-checkbox h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500';
+                mobileLabel.appendChild(mobileCheckbox);
+                mobileLabel.appendChild(document.createTextNode(header.textContent.replace('↕', '').trim()));
+                mobileCustomizeCheckboxes.appendChild(mobileLabel);
             }
         }
     });
@@ -626,6 +655,9 @@ function exportTableToCSV() {
 }
 
 exportBtn.addEventListener('click', exportTableToCSV);
+if (mobileExportBtn) {
+    mobileExportBtn.addEventListener('click', exportTableToCSV);
+}
 
 function filterByCoin() {
     const searchTerm = searchCoinInput.value.trim().toUpperCase();
