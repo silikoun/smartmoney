@@ -23,6 +23,11 @@ wss.on('connection', ws => {
         console.log(`Received: ${message}`);
         ws.send(`Echo: ${message}`);
     });
+    // Send cached data to the new client
+    const data = Object.values(cache).map(item => item.data);
+    if (data.length > 0) {
+        ws.send(JSON.stringify(data));
+    }
     ws.on('close', () => {
         console.log('Client disconnected');
     });
