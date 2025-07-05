@@ -4,10 +4,9 @@
   "description": "A Node.js application to display Binance Futures data.",
   "main": "server.js",
   "scripts": {
-    "start": "npm run build:css && concurrently \"node server.js\" \"node indicators-server.js\"",
-    "dev": "npm run build:css && concurrently \"node server.js\" \"node indicators-server.js\"",
-    "build:css": "node build-css.js",
-    "gcp-build": "npm run build:css"
+    "start": "concurrently \"node server.js\" \"node indicators-server.js\"",
+    "dev": "concurrently \"node server.js\" \"node indicators-server.js\"",
+    "gcp-build": "echo 'No build step required'"
   },
   "keywords": [
     "binance",
@@ -27,9 +26,6 @@
     "ws": "^8.2.3"
   },
   "devDependencies": {
-    "@stagewise/toolbar": "^0.4.9",
-    "@tailwindcss/postcss": "^4.1.11",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.11"
+    "@stagewise/toolbar": "^0.4.9"
   }
 }
