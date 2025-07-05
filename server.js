@@ -4,7 +4,6 @@ const path = require('path');
 const WebSocket = require('ws');
 const axios = require('axios');
 const logger = require('./logger');
-const paperTrader = require('./paper-trader');
 
 const app = express();
 const server = http.createServer(app);
@@ -73,15 +72,6 @@ app.get('/api/blacklist', (req, res) => {
         return { symbol, timeRemaining };
     });
     res.json(blacklistData);
-});
-
-app.get('/api/paper-portfolio', (req, res) => {
-    const portfolio = paperTrader.getPortfolio();
-    const portfolioToSend = {
-        ...portfolio,
-        openPositions: Array.from(portfolio.openPositions.entries())
-    };
-    res.json(portfolioToSend);
 });
 
 app.get('/api/bybit-leaderboard', async (req, res) => {
@@ -432,15 +422,6 @@ const fetchAllDataForSymbol = async (symbol) => {
     const vwapDeviation15m = vwap15m > 0 ? ((price - vwap15m) / vwap15m) * 100 : 0;
     const vwapDeviation4h = vwap4h > 0 ? ((price - vwap4h) / vwap4h) * 100 : 0;
     const vwapDeviation1d = vwap1d > 0 ? ((price - vwap1d) / vwap1d) * 100 : 0;
-
-    // --- Paper Trading ---
-    paperTrader.checkTrades(symbol, price);
-
-    if (aiScore > 80 && vwapDeviation15m > 0) {
-        paperTrader.openPosition(symbol, 'long', price, aiScore);
-    } else if (aiScore < -80 && vwapDeviation15m < 0) {
-        paperTrader.openPosition(symbol, 'short', price, aiScore);
-    }
 
     if (symbol === 'BTCUSDT' || symbol === 'ETHUSDT') {
         let sentiment = 'Neutral';
@@ -808,8 +789,7 @@ function calculateWhaleSentiment(symbols) {
 }
 
 
-const PORT = process.env.PORT || 5019;
+const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
     console.log(`Server is listening on port ${PORT}`);
-    paperTrader.loadPortfolio();
 });
