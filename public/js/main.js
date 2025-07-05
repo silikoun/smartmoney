@@ -171,21 +171,32 @@ socket.onopen = () => {
 
 socket.onmessage = (event) => {
     const data = JSON.parse(event.data);
-    if (data.error) {
-        console.error('Server error:', data.error);
-        return;
-    }
-
-    if (data.symbol === 'alpha7Signal') {
-        updateMarketSentiment('alpha7', data.alpha7Signal);
-    }
-
-    const existingIndex = allData.findIndex(item => item.symbol === data.symbol);
-    if (existingIndex > -1) {
-        // Merge new data into the existing object to preserve calculated fields
-        Object.assign(allData[existingIndex], data);
+    if (Array.isArray(data)) {
+        data.forEach(item => {
+            const existingIndex = allData.findIndex(d => d.symbol === item.symbol);
+            if (existingIndex > -1) {
+                Object.assign(allData[existingIndex], item);
+            } else {
+                allData.push(item);
+            }
+        });
     } else {
-        allData.push(data);
+        if (data.error) {
+            console.error('Server error:', data.error);
+            return;
+        }
+
+        if (data.symbol === 'alpha7Signal') {
+            updateMarketSentiment('alpha7', data.alpha7Signal);
+        }
+
+        const existingIndex = allData.findIndex(item => item.symbol === data.symbol);
+        if (existingIndex > -1) {
+            // Merge new data into the existing object to preserve calculated fields
+            Object.assign(allData[existingIndex], data);
+        } else {
+            allData.push(data);
+        }
     }
 
     sessionStorage.setItem('mainTableData', JSON.stringify(allData));
