@@ -1,5 +1,6 @@
 const express = require('express');
 const http = require('http');
+const WebSocket = require('ws');
 const path = require('path');
 const axios = require('axios');
 const logger = require('./logger');
@@ -7,6 +8,22 @@ const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+
+wss.on('connection', ws => {
+    console.log('Client connected');
+    ws.on('close', () => {
+        console.log('Client disconnected');
+    });
+});
+
+function broadcast(data) {
+    wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(data));
+        }
+    });
+}
 
 const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
 let isPaused = false;

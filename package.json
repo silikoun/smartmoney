@@ -22,7 +22,7 @@
     "kill-port": "^2.0.1",
     "node-binance-api": "^1.0.10",
     "winston": "^3.17.0",
-    "ws": "^8.2.3"
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@stagewise/toolbar": "^0.4.9"

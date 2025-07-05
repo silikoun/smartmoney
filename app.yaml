@@ -5,16 +5,10 @@ network:
   session_affinity: true
 
 handlers:
-- url: /js
-  static_dir: public/js
-
 - url: /ws
   script: auto
-
-- url: /
-  static_files: public/index.html
-  upload: public/index.html
-  expiration: "0s" # Force no caching for index.html
+  secure: always
 
 - url: /.*
   script: auto
+  secure: always
