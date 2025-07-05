@@ -7,11 +7,22 @@ const logger = require('./logger');
 const fs = require('fs');
 
 const app = express();
-const server = http.createServer(app);
+const server = http.createServer((req, res) => {
+  if (req.url === '/readiness') {
+    res.writeHead(200);
+    return res.end('OK');
+  }
+  // Pass other requests to Express
+  app(req, res);
+});
 const wss = new WebSocket.Server({ server, path: '/ws' });
 
 wss.on('connection', ws => {
     console.log('Client connected');
+    ws.on('message', (message) => {
+        console.log(`Received: ${message}`);
+        ws.send(`Echo: ${message}`);
+    });
     ws.on('close', () => {
         console.log('Client disconnected');
     });
