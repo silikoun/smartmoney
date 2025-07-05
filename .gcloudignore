@@ -10,6 +10,7 @@ node_modules/
 # Ignore local development configuration.
 .vscode/
 smartmoney.code-workspace
+paper-trades.json
 
 # Ignore the sak directory
 ../sak/
