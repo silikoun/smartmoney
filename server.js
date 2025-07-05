@@ -309,11 +309,14 @@ wss.on('connection', (ws, req) => {
             console.log('Indicator client disconnected');
             clearTimeout(timeoutId);
         });
-    } else {
-        console.log('Client connected');
+    } else if (url.pathname === '/ws') {
+        console.log('Main client connected');
         ws.on('close', () => {
-            console.log('Client disconnected');
+            console.log('Main client disconnected');
         });
+    } else {
+        console.log('Unknown client connected to:', url.pathname);
+        ws.close();
     }
 });
 
@@ -858,49 +861,3 @@ const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
     console.log(`Server is listening on port ${PORT}`);
 });
-
-</file_content>
-
-Now that you have the latest state of the file, try the operation again with fewer, more precise SEARCH blocks. For large files especially, it may be prudent to try to limit yourself to <5 SEARCH/REPLACE blocks at a time, then wait for the user to respond with the result of the operation before following up with another replace_in_file call to make additional edits.
-(If you run into this error 3 times in a row, you may use the write_to_file tool as a fallback.)
-</error><environment_details>
-# VSCode Visible Files
-server.js
-
-# VSCode Open Tabs
-.vscode/extensions.json
-public/css/styles.css
-tailwind.config.js
-build-css.js
-public/css/input.css
-indicators-server.js
-public/funding-rate.html
-public/js/funding-rate.js
-public/js/oi-weighted-funding-rate.js
-public/indicators.html
-public/oi-weighted-funding-rate.html
-public/liquidation-cluster.html
-config.json
-.gcloudignore
-paper-trader.js
-public/js/main.js
-public/index.html
-cloudbuild.yaml
-app.yaml
-public/js/indicators.js
-package.json
-server.js
-
-# Recently Modified Files
-These files have been modified since you last accessed them (file was just edited so you may need to re-read it before editing):
-server.js
-
-# Current Time
-7/5/2025, 2:33:36 PM (Africa/Casablanca, UTC+1:00)
-
-# Context Window Usage
-131,707 / 1,048.576K tokens used (13%)
-
-# Current Mode
-ACT MODE
-</environment_details>
