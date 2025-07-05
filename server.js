@@ -1,15 +1,12 @@
 const express = require('express');
 const http = require('http');
 const path = require('path');
-const WebSocket = require('ws');
 const axios = require('axios');
 const logger = require('./logger');
 const fs = require('fs');
-const { URL } = require('url');
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ noServer: true });
 
 const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
 let isPaused = false;
@@ -248,91 +245,11 @@ const startDataFetching = async () => {
 
 startDataFetching();
 
-server.on('upgrade', (request, socket, head) => {
-    const { pathname } = new URL(request.url, `http://${request.headers.host}`);
-
-    wss.handleUpgrade(request, socket, head, (ws) => {
-        ws.pathname = pathname;
-        wss.emit('connection', ws, request);
-    });
-});
-
-wss.on('connection', (ws, req) => {
-    ws.isAlive = true;
-    ws.on('pong', () => {
-        ws.isAlive = true;
-    });
-
-    if (ws.pathname === '/indicators') {
-        console.log('Indicator client connected');
-        // No need to start a new data fetching loop here, it's already running.
-        // Instead, just send the cached data.
-        Object.values(cache).forEach(cachedItem => {
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify(cachedItem.data));
-            }
-        });
-    } else {
-        console.log('Main client connected');
-        // Send all data from cache on connection
-        Object.values(cache).forEach(cachedItem => {
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify(cachedItem.data));
-            }
-        });
-    }
-
-    ws.on('close', () => {
-        console.log('Client disconnected');
-    });
-});
-
-const interval = setInterval(function ping() {
-    wss.clients.forEach(function each(ws) {
-        if (ws.isAlive === false) return ws.terminate();
-        ws.isAlive = false;
-        ws.ping();
-    });
-}, 30000);
-
-wss.on('close', function close() {
-    clearInterval(interval);
-});
-
-const broadcast = (data) => {
-    wss.clients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-            if (client.pathname === '/indicators' && data.symbol) {
-                // Send only indicator-specific data to indicator clients
-                const indicatorData = {
-                    symbol: data.symbol,
-                    sma20_1h: data.sma20_1h,
-                    sma50_1h: data.sma50_1h,
-                    sma200_1h: data.sma200_1h,
-                    sma20_4h: data.sma20_4h,
-                    sma50_4h: data.sma50_4h,
-                    sma200_4h: data.sma200_4h,
-                    sma20_1d: data.sma20_1d,
-                    sma50_1d: data.sma50_1d,
-                    sma200_1d: data.sma200_1d,
-                    relativeStrength1h: data.relativeStrength1h,
-                    relativeStrength4h: data.relativeStrength4h,
-                    relativeStrength24h: data.relativeStrength24h,
-                    timestamp: data.timestamp
-                };
-                client.send(JSON.stringify(indicatorData));
-            } else if (client.pathname !== '/indicators') {
-                client.send(JSON.stringify(data));
-            }
-        }
-    });
-};
-
 const fetchAllDataForSymbol = async (symbol) => {
     const now = Date.now();
     if (cache[symbol] && (now - cache[symbol].timestamp) < CACHE_DURATION_SECONDS * 1000) {
         // console.log(`[CACHE HIT] Serving ${symbol} from cache.`);
-        return cache[symbol].data;
+        return;
     }
 
     console.log(`[CACHE MISS] Fetching ${symbol} from API.`);
@@ -591,16 +508,12 @@ const fetchAllDataForSymbol = async (symbol) => {
         lsGlobalAccountRatioChange4h
     };
 
-    previousData[symbol] = {
-        openInterest: openInterestInUSD
-    };
-
     cache[symbol] = {
         timestamp: Date.now(),
         data: data
     };
 
-    return data;
+    broadcast(data);
 };
 
 const calculateOiChange = (data, candles) => {
@@ -842,7 +755,7 @@ function calculateWhaleSentiment(symbols) {
         }
     });
 
-    if (bullishCount > bearishCount) {
+    if (bullishCount > bullishCount) {
         whaleSentiment = 'Bullish';
     } else if (bearishCount > bullishCount) {
         whaleSentiment = 'Bearish';
@@ -857,3 +770,44 @@ const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
     console.log(`Server is listening on port ${PORT}`);
 });
+</final_file_content>
+
+IMPORTANT: For any future changes to this file, use the final_file_content shown above as your reference. This content reflects the current state of the file, including any auto-formatting (e.g., if you used single quotes but the formatter converted them to double quotes). Always base your SEARCH/REPLACE operations on this final version to ensure accuracy.
+
+<environment_details>
+# VSCode Visible Files
+server.js
+
+# VSCode Open Tabs
+.vscode/extensions.json
+public/css/styles.css
+tailwind.config.js
+build-css.js
+public/css/input.css
+indicators-server.js
+public/funding-rate.html
+public/js/funding-rate.js
+public/js/oi-weighted-funding-rate.js
+public/indicators.html
+public/oi-weighted-funding-rate.html
+public/liquidation-cluster.html
+config.json
+.gcloudignore
+paper-trader.js
+public/index.html
+cloudbuild.yaml
+package.json
+app.yaml
+public/js/indicators.js
+public/js/main.js
+server.js
+
+# Current Time
+7/5/2025, 3:14:26 PM (Africa/Casablanca, UTC+1:00)
+
+# Context Window Usage
+790,670 / 1,048.576K tokens used (75%)
+
+# Current Mode
+ACT MODE
+</environment_details>
