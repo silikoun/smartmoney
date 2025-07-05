@@ -31,6 +31,7 @@ let visibleColumns = {};
 // --- Initialization ---
 
 function initialize() {
+    sessionStorage.removeItem('mainTableData');
     if (moreActionsBtn) {
         moreActionsBtn.addEventListener('click', (event) => {
             event.stopPropagation();

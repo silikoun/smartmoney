@@ -5,10 +5,11 @@ const WebSocket = require('ws');
 const axios = require('axios');
 const logger = require('./logger');
 const fs = require('fs');
+const { URL } = require('url');
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ noServer: true });
 
 const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
 let isPaused = false;
@@ -86,6 +87,11 @@ app.get('/api/bybit-leaderboard', async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch Bybit leaderboard data' });
     }
+});
+
+app.get('/api/data', (req, res) => {
+    const data = Object.values(cache).map(item => item.data);
+    res.json(data);
 });
 
 const getBinanceData = async (symbol, endpoint, params = {}) => {
@@ -173,14 +179,6 @@ function calculateAiScore(oiChange, divChange, lsChange) {
     return Math.round(score * 100);
 }
 
-const broadcast = (data) => {
-    wss.clients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(data));
-        }
-    });
-};
-
 const getSymbolsWithRetry = async (retries = 5, initialDelay = 5000) => {
     let delay = initialDelay;
     for (let i = 0; i < retries; i++) {
@@ -220,7 +218,7 @@ const startDataFetching = async () => {
         try {
             const allSymbols = await getSymbolsWithRetry();
             if (!allSymbols) {
-                broadcast({ error: 'Could not fetch symbols after multiple retries. Please check server connection and restart.' });
+                console.error('Could not fetch symbols after multiple retries. Please check server connection and restart.');
                 isProcessing = false;
                 return;
             }
@@ -229,10 +227,7 @@ const startDataFetching = async () => {
 
             for (const symbol of allSymbols) {
                 try {
-                    const data = await fetchAllDataForSymbol(symbol);
-                    if (data) {
-                        broadcast(data);
-                    }
+                    await fetchAllDataForSymbol(symbol);
                 } catch (error) {
                     console.error(`Failed to process symbol ${symbol}:`, error);
                 }
@@ -241,10 +236,6 @@ const startDataFetching = async () => {
 
             calculateWhaleSentiment(allSymbols);
 
-            broadcast({
-                symbol: 'alpha7Signal',
-                alpha7Signal: whaleSentiment === 'Bullish' ? 100 : (whaleSentiment === 'Bearish' ? -100 : 0)
-            });
         } finally {
             isProcessing = false;
             console.log('Finished processing all symbols for this cycle.');
@@ -257,59 +248,31 @@ const startDataFetching = async () => {
 
 startDataFetching();
 
+server.on('upgrade', (request, socket, head) => {
+    const { pathname } = new URL(request.url, `http://${request.headers.host}`);
+
+    wss.handleUpgrade(request, socket, head, (ws) => {
+        ws.pathname = pathname;
+        wss.emit('connection', ws, request);
+    });
+});
+
 wss.on('connection', (ws, req) => {
     ws.isAlive = true;
     ws.on('pong', () => {
         ws.isAlive = true;
     });
 
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    if (url.pathname === '/indicators') {
+    if (ws.pathname === '/indicators') {
         console.log('Indicator client connected');
-        let isProcessing = false;
-        let timeoutId;
-
-        const processSymbols = async () => {
-            if (isProcessing) {
-                return;
+        // No need to start a new data fetching loop here, it's already running.
+        // Instead, just send the cached data.
+        Object.values(cache).forEach(cachedItem => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(cachedItem.data));
             }
-            isProcessing = true;
-
-            try {
-                const symbols = await getSymbolsWithRetry();
-                if (!symbols) {
-                    ws.send(JSON.stringify({ error: 'Could not fetch symbols' }));
-                    isProcessing = false;
-                    return;
-                }
-                const delay = 60000 / symbols.length;
-
-                for (const symbol of symbols) {
-                    try {
-                        const data = await fetchAllDataForSymbol(symbol);
-                        if (data && ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify(data));
-                        }
-                    } catch (error) {
-                        console.error(`Failed to process symbol ${symbol} for indicators:`, error);
-                    }
-                    await new Promise(res => setTimeout(res, delay));
-                }
-            } finally {
-                isProcessing = false;
-                if (ws.readyState === WebSocket.OPEN) {
-                    timeoutId = setTimeout(processSymbols, 1000);
-                }
-            }
-        };
-
-        processSymbols();
-
-        ws.on('close', () => {
-            console.log('Indicator client disconnected');
-            clearTimeout(timeoutId);
         });
-    } else if (url.pathname === '/ws' || url.pathname === '/') {
+    } else {
         console.log('Main client connected');
         // Send all data from cache on connection
         Object.values(cache).forEach(cachedItem => {
@@ -317,13 +280,11 @@ wss.on('connection', (ws, req) => {
                 ws.send(JSON.stringify(cachedItem.data));
             }
         });
-        ws.on('close', () => {
-            console.log('Main client disconnected');
-        });
-    } else {
-        console.log('Unknown client connected to:', url.pathname);
-        ws.close();
     }
+
+    ws.on('close', () => {
+        console.log('Client disconnected');
+    });
 });
 
 const interval = setInterval(function ping() {
@@ -338,10 +299,39 @@ wss.on('close', function close() {
     clearInterval(interval);
 });
 
+const broadcast = (data) => {
+    wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            if (client.pathname === '/indicators' && data.symbol) {
+                // Send only indicator-specific data to indicator clients
+                const indicatorData = {
+                    symbol: data.symbol,
+                    sma20_1h: data.sma20_1h,
+                    sma50_1h: data.sma50_1h,
+                    sma200_1h: data.sma200_1h,
+                    sma20_4h: data.sma20_4h,
+                    sma50_4h: data.sma50_4h,
+                    sma200_4h: data.sma200_4h,
+                    sma20_1d: data.sma20_1d,
+                    sma50_1d: data.sma50_1d,
+                    sma200_1d: data.sma200_1d,
+                    relativeStrength1h: data.relativeStrength1h,
+                    relativeStrength4h: data.relativeStrength4h,
+                    relativeStrength24h: data.relativeStrength24h,
+                    timestamp: data.timestamp
+                };
+                client.send(JSON.stringify(indicatorData));
+            } else if (client.pathname !== '/indicators') {
+                client.send(JSON.stringify(data));
+            }
+        }
+    });
+};
+
 const fetchAllDataForSymbol = async (symbol) => {
     const now = Date.now();
     if (cache[symbol] && (now - cache[symbol].timestamp) < CACHE_DURATION_SECONDS * 1000) {
-        console.log(`[CACHE HIT] Serving ${symbol} from cache.`);
+        // console.log(`[CACHE HIT] Serving ${symbol} from cache.`);
         return cache[symbol].data;
     }
 
@@ -864,3 +854,6 @@ function calculateWhaleSentiment(symbols) {
 
 
 const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => {
+    console.log(`Server is listening on port ${PORT}`);
+});
