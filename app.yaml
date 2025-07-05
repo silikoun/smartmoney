@@ -5,14 +5,6 @@ network:
   session_affinity: true
 
 handlers:
-- url: /
-  static_files: public/index.html
-  upload: public/index.html
-
-- url: /(.*)
-  static_files: public/\1
-  upload: public/(.*)
-
 - url: /.*
   script: auto
   secure: always

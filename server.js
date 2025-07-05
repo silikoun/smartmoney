@@ -17,13 +17,13 @@ wss.on('connection', ws => {
     });
 });
 
-function broadcast(data) {
-    wss.clients.forEach(client => {
+wss.broadcast = function broadcast(data) {
+    wss.clients.forEach(function each(client) {
         if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify(data));
         }
     });
-}
+};
 
 const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
 let isPaused = false;
@@ -530,7 +530,7 @@ const fetchAllDataForSymbol = async (symbol) => {
         data: data
     };
 
-    broadcast(data);
+    wss.broadcast(data);
 };
 
 const calculateOiChange = (data, candles) => {
