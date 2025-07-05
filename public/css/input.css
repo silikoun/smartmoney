@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    body {
+        background-color: #FFFFFF;
+        color: #131722;
+    }
+    .table-header-cell {
+        background-color: #F1F5F9;
+        color: #64748B;
+    }
+    .table-body-row:hover {
+        background-color: #F8FAFC;
+    }
+    tbody tr:nth-child(even) {
+        background-color: #F9FAFB;
+    }
+    thead th {
+        position: -webkit-sticky; /* for Safari */
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    /* Style for the 'soon' badge */
+    .soon-badge {
+        font-size: 0.6rem;
+        padding: 0.1rem 0.3rem;
+        border-radius: 0.25rem;
+        background-color: #ef4444; /* red-500 */
+        color: white;
+        margin-left: 0.4rem;
+        text-transform: uppercase;
+        font-weight: bold;
+        line-height: 1;
+    }
+    .nav-item-soon {
+        color: #9ca3af; /* gray-400 */
+        cursor: not-allowed;
+    }
+}

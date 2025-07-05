@@ -4,8 +4,10 @@
   "description": "A Node.js application to display Binance Futures data.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "concurrently \"node server.js\" \"node indicators-server.js\""
+    "start": "concurrently \"node server.js\" \"node indicators-server.js\"",
+    "dev": "concurrently \"node server.js\" \"node indicators-server.js\"",
+    "build:css": "node build-css.js",
+    "gcp-build": "npm run build:css"
   },
   "keywords": [
     "binance",
@@ -19,12 +21,15 @@
     "axios": "^0.21.1",
     "concurrently": "^9.2.0",
     "express": "^4.17.1",
+    "kill-port": "^2.0.1",
     "node-binance-api": "^1.0.10",
-    "sak": "file:../sak",
     "winston": "^3.17.0",
     "ws": "^8.2.3"
   },
   "devDependencies": {
-    "@stagewise/toolbar": "^0.4.9"
+    "@stagewise/toolbar": "^0.4.9",
+    "@tailwindcss/postcss": "^4.1.11",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.11"
   }
 }

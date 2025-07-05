@@ -3,195 +3,240 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Binance Futures Market Data</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Top Position Trader</title>
+    <link href="/css/styles.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/peity/3.3.0/jquery.peity.min.js"></script>
-    <style>
-        body {
-            background-color: #FFFFFF;
-            color: #131722;
-        }
-        .table-header-cell {
-            background-color: #F1F5F9;
-            color: #64748B;
-        }
-        .table-body-row:hover {
-            background-color: #F8FAFC;
-        }
-        tbody tr:nth-child(even) {
-            background-color: #F9FAFB;
-        }
-        thead th {
-            position: -webkit-sticky; /* for Safari */
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-    </style>
 </head>
 <body class="font-sans">
 
-    <div class="w-full p-4">
-        <header class="flex flex-col sm:flex-row items-center justify-between p-4 border-b border-gray-200 space-y-4 sm:space-y-0">
-            <!-- Left side: Title and Exchange -->
-            <div class="flex items-center space-x-4">
-                <h1 class="text-xl font-bold text-gray-800">Futures Market</h1>
-                <div class="relative">
-                    <button id="exchange-dropdown-btn" class="flex items-center space-x-2 px-3 py-1.5 text-sm bg-gray-100 text-gray-800 rounded-md hover:bg-gray-200 transition">
-                        <span id="selected-exchange">Binance</span>
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </button>
-                    <div id="exchange-dropdown-panel" class="hidden absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-20">
-                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-exchange="binance">Binance</a>
-                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-exchange="bybit">Bybit <span class="text-red-500 text-xs">Coming Soon</span></a>
-                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-exchange="hyperliquid">Hyperliquid <span class="text-red-500 text-xs">Coming Soon</span></a>
+    <div class="w-full">
+        <!-- New Header -->
+        <header class="bg-white border-b border-gray-200">
+            <!-- Top Navigation Bar -->
+            <div class="flex items-center justify-between px-4 h-14">
+                <!-- Left: Logo & Main Menu -->
+                <div class="flex items-center space-x-6">
+                    <div class="flex items-center">
+                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                        <span class="ml-2 text-lg font-bold text-gray-800">TopTrader</span>
                     </div>
+                    <nav class="hidden md:flex items-center space-x-5 text-sm font-medium">
+                        <a href="#" class="nav-item-soon flex items-center">Ranking <span class="soon-badge">soon</span></a>
+                        <a href="#" class="nav-item-soon flex items-center">Fund Flow <span class="soon-badge">soon</span></a>
+                        <a href="#" class="nav-item-soon flex items-center">ETF <span class="soon-badge">soon</span></a>
+                        <a href="#" class="nav-item-soon flex items-center">Charts <span class="soon-badge">soon</span></a>
+                        <a href="#" class="nav-item-soon flex items-center">News <span class="soon-badge">soon</span></a>
+                        <a href="#" class="nav-item-soon flex items-center">Pro Chart <span class="soon-badge">soon</span></a>
+                        <a href="#" class="nav-item-soon flex items-center">Alerts <span class="soon-badge">soon</span></a>
+                        <a href="#" class="nav-item-soon flex items-center">AI Analysis <span class="soon-badge">soon</span></a>
+                    </nav>
+                </div>
+
+                <!-- Right: Actions -->
+                <div class="flex items-center space-x-3">
+                    <button class="p-2 text-gray-600 rounded-full hover:bg-gray-100 transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                    </button>
+                    <button class="p-2 text-gray-600 rounded-full hover:bg-gray-100 transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    </button>
                 </div>
             </div>
-        
-            <!-- Center: Market Sentiment -->
-            <div id="market-sentiment" class="flex items-center space-x-6">
-                <div id="sentiment-btc" class="flex items-center space-x-2 text-sm">
-                    <span class="font-semibold">BTC:</span>
-                    <span class="text-gray-600">Loading...</span>
-                </div>
-                <div id="sentiment-eth" class="flex items-center space-x-2 text-sm">
-                    <span class="font-semibold">ETH:</span>
-                    <span class="text-gray-600">Loading...</span>
-                </div>
-                <div id="sentiment-alpha7" class="flex items-center space-x-2 text-sm">
-                    <span class="font-semibold">Whale:</span>
-                    <span class="text-gray-600">Loading...</span>
-                </div>
-            </div>
-        
-            <!-- Right side: Search and Actions -->
-            <div class="flex items-center space-x-3">
-                <div class="relative">
-                    <input type="text" id="search-coin-input" placeholder="Search..." class="pl-10 pr-4 py-1.5 text-sm border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 w-40">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                         <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+
+            <!-- Bottom Screener Bar -->
+            <div class="flex items-center justify-between px-4 py-2 border-t border-gray-200">
+                <!-- Left: Market & Platform Selectors -->
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center border border-gray-300 rounded-md">
+                        <button id="market-type-futures" class="px-3 py-1.5 text-sm font-semibold bg-gray-200 text-gray-800 rounded-l-md">Futures</button>
+                        <button id="market-type-spot" class="px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100 rounded-r-md">Spot</button>
                     </div>
-                    <button id="search-coin-btn" class="hidden">Search</button>
+                    <div class="relative">
+                        <button id="exchange-dropdown-btn" class="flex items-center space-x-2 px-3 py-1.5 text-sm bg-gray-100 text-gray-800 rounded-md hover:bg-gray-200 transition">
+                            <span id="selected-exchange">Binance</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div id="exchange-dropdown-panel" class="hidden absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-20">
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-exchange="binance">Binance</a>
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-exchange="bybit">Bybit <span class="soon-badge">Soon</span></a>
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-exchange="hyperliquid">Hyperliquid <span class="soon-badge">Soon</span></a>
+                        </div>
+                    </div>
                 </div>
-                <a href="/indicators" class="px-4 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition">Indicators</a>
-                <div class="relative">
-                     <button id="customize-btn" class="p-2 text-gray-600 bg-gray-100 rounded-full hover:bg-gray-200 transition">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                     </button>
-                     <div id="customize-panel" class="hidden absolute right-0 mt-2 w-96 bg-white border border-gray-200 rounded-lg shadow-lg z-10 p-4">
-                         <h3 class="text-lg font-semibold mb-3 text-gray-800">Visible Columns</h3>
-                         <div id="customize-checkboxes" class="grid grid-cols-3 gap-4">
-                             <!-- Checkboxes will be generated by JS -->
-                         </div>
-                     </div>
+                
+                <!-- Center: Market Sentiment -->
+                <div id="market-sentiment" class="hidden md:flex items-center space-x-6">
+                    <div id="sentiment-btc" class="flex items-center space-x-2 text-sm"><span class="font-semibold">BTC:</span><span class="text-gray-600">Loading...</span></div>
+                    <div id="sentiment-eth" class="flex items-center space-x-2 text-sm"><span class="font-semibold">ETH:</span><span class="text-gray-600">Loading...</span></div>
                 </div>
-                <div class="relative">
-                    <button id="more-actions-btn" class="p-2 text-gray-600 bg-gray-100 rounded-full hover:bg-gray-200 transition">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
-                    </button>
-                    <div id="more-actions-panel" class="hidden absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
-                        <button id="export-btn" class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Export to CSV</button>
-                        <button class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">MCP <span class="text-red-500 text-xs">Coming Soon</span></button>
+            
+                <!-- Right side: Search and Actions -->
+                <div class="flex items-center space-x-3">
+                    <div class="relative">
+                        <input type="text" id="search-coin-input" placeholder="Search..." class="pl-10 pr-4 py-1.5 text-sm border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 w-40">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></div>
+                        <button id="search-coin-btn" class="hidden">Search</button>
+                    </div>
+                    <a href="/indicators" class="px-4 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition">Indicators</a>
+                    <div class="relative">
+                        <button id="customize-btn" class="flex items-center space-x-2 px-3 py-1.5 text-sm bg-gray-100 text-gray-800 rounded-md hover:bg-gray-200 transition">
+                            <span>Customize</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div id="customize-panel" class="hidden absolute right-0 mt-2 w-96 bg-white border border-gray-200 rounded-lg shadow-lg z-30 p-4">
+                            <h3 class="text-lg font-semibold mb-3 text-gray-800">Visible Columns</h3>
+                            <div id="customize-checkboxes" class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <h4 class="font-semibold text-sm mb-2">Overview</h4>
+                                    <div id="overview-columns"></div>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-sm mb-2">Divergence</h4>
+                                    <div id="divergence-columns"></div>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-sm mb-2">Notional</h4>
+                                    <div id="notional-columns"></div>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-sm mb-2">Volume</h4>
+                                    <div id="volume-columns"></div>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-sm mb-2">L/S Position</h4>
+                                    <div id="position-columns"></div>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-sm mb-2">L/S (Accounts)</h4>
+                                    <div id="long-short-accounts-columns"></div>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-sm mb-2">Funding Rate</h4>
+                                    <div id="funding-rate-columns"></div>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-sm mb-2">OI-Weighted FR</h4>
+                                    <div id="oi-weighted-funding-rate-columns"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="relative">
+                        <button id="more-actions-btn" class="p-2 text-gray-600 bg-gray-100 rounded-full hover:bg-gray-200 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg></button>
+                        <div id="more-actions-panel" class="hidden absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+                            <button id="export-btn" class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Export to CSV</button>
+                            <button class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">MCP <span class="soon-badge">Soon</span></button>
+                        </div>
                     </div>
                 </div>
             </div>
         </header>
 
-        <div class="mb-4 border-b border-gray-200">
-            <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" id="myTab" data-tabs-toggle="#myTabContent" role="tablist">
-                <li class="mr-2" role="presentation"><button class="inline-block p-4 border-b-2 rounded-t-lg" id="overview-tab" data-tabs-target="#overview" type="button" role="tab" aria-controls="overview" aria-selected="true">Overview</button></li>
-                <li class="mr-2" role="presentation"><button class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300" id="open-interest-tab" data-tabs-target="#open-interest" type="button" role="tab" aria-controls="open-interest" aria-selected="false">Open Interest</button></li>
-                <li class="mr-2" role="presentation"><button class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300" id="notional-tab" data-tabs-target="#notional" type="button" role="tab" aria-controls="notional" aria-selected="false">Notional</button></li>
-                <li class="mr-2" role="presentation"><button class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300" id="volume-tab" data-tabs-target="#volume" type="button" role="tab" aria-controls="volume" aria-selected="false">Volume</button></li>
-                <li class="mr-2" role="presentation"><button class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300" id="position-tab" data-tabs-target="#position" type="button" role="tab" aria-controls="position" aria-selected="false">L/S Position</button></li>
-                <li class="mr-2" role="presentation"><button class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300" id="long-short-accounts-tab" data-tabs-target="#long-short-accounts" type="button" role="tab" aria-controls="long-short-accounts" aria-selected="false">L/S (Accounts)</button></li>
-                <li role="presentation"><button class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300" id="divergence-tab" data-tabs-target="#divergence" type="button" role="tab" aria-controls="divergence" aria-selected="false">Divergence</button></li>
-                <li class="mr-2" role="presentation"><button class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300" id="funding-rate-tab" data-tabs-target="#funding-rate" type="button" role="tab" aria-controls="funding-rate" aria-selected="false">Funding Rate</button></li>
-            </ul>
-        </div>
+        <!-- Main Content -->
+        <main class="p-4">
+            <div class="mb-4 border-b border-gray-200">
+                <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" id="myTab" data-tabs-toggle="#myTabContent" role="tablist">
+                    <li class="mr-2" role="presentation"><button class="inline-block p-4 border-b-2 rounded-t-lg" id="overview-tab" data-tabs-target="#overview" type="button" role="tab" aria-controls="overview" aria-selected="true">Overview</button></li>
+                    <li class="mr-2" role="presentation"><button class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300" id="open-interest-tab" data-tabs-target="#open-interest" type="button" role="tab" aria-controls="open-interest" aria-selected="false">Open Interest</button></li>
+                    <li class="mr-2" role="presentation"><button class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300" id="notional-tab" data-tabs-target="#notional" type="button" role="tab" aria-controls="notional" aria-selected="false">Notional</button></li>
+                    <li class="mr-2" role="presentation"><button class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300" id="volume-tab" data-tabs-target="#volume" type="button" role="tab" aria-controls="volume" aria-selected="false">Volume</button></li>
+                    <li class="mr-2" role="presentation"><button class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300" id="position-tab" data-tabs-target="#position" type="button" role="tab" aria-controls="position" aria-selected="false">L/S Position</button></li>
+                    <li class="mr-2" role="presentation"><button class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300" id="long-short-accounts-tab" data-tabs-target="#long-short-accounts" type="button" role="tab" aria-controls="long-short-accounts" aria-selected="false">L/S (Accounts)</button></li>
+                    <li role="presentation"><button class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300" id="divergence-tab" data-tabs-target="#divergence" type="button" role="tab" aria-controls="divergence" aria-selected="false">Divergence</button></li>
+                    <li class="mr-2" role="presentation"><button class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300" id="funding-rate-tab" data-tabs-target="#funding-rate" type="button" role="tab" aria-controls="funding-rate" aria-selected="false">Funding Rate</button></li>
+                    <li class="mr-2" role="presentation"><button class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300" id="oi-weighted-funding-rate-tab" data-tabs-target="#oi-weighted-funding-rate" type="button" role="tab" aria-controls="oi-weighted-funding-rate" aria-selected="false">OI-Weighted FR</button></li>
+                </ul>
+            </div>
 
-        <div class="overflow-x-auto border border-gray-200">
-            <table class="min-w-full">
-                <thead class="bg-gray-50">
-                    <tr id="table-headers" class="text-xs text-left text-gray-500 uppercase">
-                <th data-sort="symbol" title="The cryptocurrency ticker symbol.">Coins &#x2195;</th>
-                <th data-sort="aiScore" data-tab="overview" title="A score from our AI model that indicates the potential for a price move.">AI Score &#x2195;</th>
-                <th data-sort="divergenceVector24h" data-tab="divergence" title="A vector indicating the direction and strength of divergence over the last 24 hours.">24h Div Vector &#x2195;<button class="filter-btn" data-column="divergenceVector24h">▼</button></th>
-                <th data-sort="alphaDivergenceScore15m" data-tab="divergence" title="A score indicating the alpha divergence over the last 15 minutes.">Alpha Div (15m) &#x2195;</th>
-                <th data-sort="divergenceVector4h" data-tab="divergence" title="A vector indicating the direction and strength of divergence over the last 4 hours.">Div Vector (4h) &#x2195;</th>
-                <th data-sort="divergenceVector1h" data-tab="divergence" title="A vector indicating the direction and strength of divergence over the last 1 hour.">Div Vector (1h) &#x2195;</th>
-                <th data-sort="divergenceVector15m" data-tab="divergence" title="A vector indicating the direction and strength of divergence over the last 15 minutes.">Div Vector (15m) &#x2195;</th>
-                <th data-sort="divergenceVector5m" data-tab="divergence" title="A vector indicating the direction and strength of divergence over the last 5 minutes.">Div Vector (5m) &#x2195;</th>
-                <th data-sort="oiConvictionScore" data-tab="notional" title="A score indicating the conviction of Open Interest.">OI Conviction &#x2195;</th>
-                <th data-sort="lsConvictionScore" data-tab="position" title="A score indicating the conviction of Long/Short positions.">L/S Conviction &#x2195;</th>
-                <th data-sort="divVectorConvictionScore" data-tab="divergence" title="A score indicating the conviction of the divergence vector.">Div Vector Conviction &#x2195;</th>
-                <th data-sort="vwapDeviation15m" data-tab="overview" title="The deviation from the Volume Weighted Average Price over the last 15 minutes.">VWAP Dev (15m) &#x2195;</th>
-                <th data-sort="vwapDeviation4h" data-tab="overview" title="The deviation from the Volume Weighted Average Price over the last 4 hours.">VWAP Dev (4h) &#x2195;</th>
-                <th data-sort="vwapDeviation1d" data-tab="overview" title="The deviation from the Volume Weighted Average Price over the last day.">VWAP Dev (1d) &#x2195;</th>
-                <th data-sort="lsTopPositionRatio" data-tab="position" title="The ratio of long to short positions of top traders.">L/S Top Position &#x2195;</th>
-                <th data-sort="lsTopPositionRatioChange5m" data-tab="position" title="The change in the Long/Short top position ratio over the last 5 minutes.">L/S Top Pos Change (5m) &#x2195;</th>
-                <th data-sort="lsTopPositionRatioChange15m" data-tab="position" title="The change in the Long/Short top position ratio over the last 15 minutes.">L/S Top Pos Change (15m) &#x2195;</th>
-                <th data-sort="lsTopPositionRatioChange30m" data-tab="position" title="The change in the Long/Short top position ratio over the last 30 minutes.">L/S Top Pos Change (30m) &#x219-5;</th>
-                <th data-sort="lsTopPositionRatioChange1h" data-tab="position" title="The change in the Long/Short top position ratio over the last 1 hour.">L/S Top Pos Change (1h) &#x2195;</th>
-                <th data-sort="lsTopPositionRatioChange4h" data-tab="position" title="The change in the Long/Short top position ratio over the last 4 hours.">L/S Top Pos Change (4h) &#x2195;</th>
-                <th data-sort="lsGlobalAccountRatio" data-tab="long-short-accounts" title="The ratio of long to short positions of all accounts.">L/S Global Acc. Ratio &#x2195;</th>
-                <th data-sort="lsGlobalAccountRatioChange5m" data-tab="long-short-accounts" title="The change in the Long/Short global account ratio over the last 5 minutes.">L/S Acc. Change (5m) &#x2195;</th>
-                <th data-sort="lsGlobalAccountRatioChange15m" data-tab="long-short-accounts" title="The change in the Long/Short global account ratio over the last 15 minutes.">L/S Acc. Change (15m) &#x2195;</th>
-                <th data-sort="lsGlobalAccountRatioChange30m" data-tab="long-short-accounts" title="The change in the Long/Short global account ratio over the last 30 minutes.">L/S Acc. Change (30m) &#x2195;</th>
-                <th data-sort="lsGlobalAccountRatioChange1h" data-tab="long-short-accounts" title="The change in the Long/Short global account ratio over the last 1 hour.">L/S Acc. Change (1h) &#x2195;</th>
-                <th data-sort="lsGlobalAccountRatioChange4h" data-tab="long-short-accounts" title="The change in the Long/Short global account ratio over the last 4 hours.">L/S Acc. Change (4h) &#x2195;</th>
-                <th data-sort="openInterestChange1m" data-tab="notional" title="The change in Open Interest over the last 1 minute.">OI Change (1m) &#x2195;</th>
-                <th data-sort="openInterestChange5m" data-tab="notional" title="The change in Open Interest over the last 5 minutes.">OI Change (5m) &#x2195;</th>
-                <th data-sort="openInterestChange15m" data-tab="notional" title="The change in Open Interest over the last 15 minutes.">OI Change (15m) &#x2195;</th>
-                <th data-sort="openInterestChange1h" data-tab="notional" title="The change in Open Interest over the last 1 hour.">OI Change (1h) &#x2195;</th>
-                <th data-sort="openInterestChange4h" data-tab="notional" title="The change in Open Interest over the last 4 hours.">OI Change (4h) &#x2195;</th>
-                <th data-sort="openInterestChange12h" data-tab="notional" title="The change in Open Interest over the last 12 hours.">OI Change (12h) &#x2195;</th>
-                <th data-sort="openInterestChange24h" data-tab="notional" title="The change in Open Interest over the last 24 hours.">OI Change (24h) &#x2195;</th>
-                <th data-sort="openInterestChange48h" data-tab="notional" title="The change in Open Interest over the last 48 hours.">OI Change (48h) &#x2195;</th>
-                <th data-sort="volumeChange5m" data-tab="volume" title="The change in volume over the last 5 minutes.">Vol (USD) Change (5m) &#x2195;</th>
-                <th data-sort="volumeChange15m" data-tab="volume" title="The change in volume over the last 15 minutes.">Vol (USD) Change (15m) &#x2195;</th>
-                <th data-sort="volumeChange1h" data-tab="volume" title="The change in volume over the last 1 hour.">Vol (USD) Change (1h) &#x2195;</th>
-                <th data-sort="volumeChange4h" data-tab="volume" title="The change in volume over the last 4 hours.">Vol (USD) Change (4h) &#x2195;</th>
-                <th data-sort="volumeChange12h" data-tab="volume" title="The change in volume over the last 12 hours.">Vol (USD) Change (12h) &#x2195;</th>
-                <th data-sort="volumeChange24h" data-tab="volume" title="The change in volume over the last 24 hours.">Vol (USD) Change (24h) &#x2195;</th>
-                <th data-sort="relativeStrength24h" data-tab="overview" title="The relative strength over the last 24 hours.">RS (24h) &#x2195;</th>
-                <th data-sort="relativeStrength4h" data-tab="overview" title="The relative strength over the last 4 hours.">RS (4h) &#x2195;</th>
-                <th data-sort="relativeStrength1h" data-tab="overview" title="The relative strength over the last 1 hour.">RS (1h) &#x2195;</th>
-                <th data-sort="timestamp" data-tab="overview" title="The time of the last update.">Last Updated &#x2195;</th>
-                <th data-sort="fundingRate" data-tab="funding-rate" title="The current funding rate.">Funding Rate (%) &#x2195;</th>
-                <th data-sort="fundingRateChange1h" data-tab="funding-rate" title="The percentage change in the funding rate over the last 1 hour.">FR Change (1h) &#x2195;</th>
-                <th data-sort="fundingRateChange4h" data-tab="funding-rate" title="The percentage change in the funding rate over the last 4 hours.">FR Change (4h) &#x2195;</th>
-                <th data-sort="fundingRateChange24h" data-tab="funding-rate" title="The percentage change in the funding rate over the last 24 hours.">FR Change (24h) &#x2195;</th>
-                <th data-sort="fundingRateSuggestion" data-tab="funding-rate" title="A suggestion based on the funding rate.">FR Suggestion &#x2195;</th>
-            </tr>
-                </thead>
-                <tbody id="data-table-body" class="divide-y divide-gray-200">
-                    <!-- Data will be inserted here by JavaScript -->
-                </tbody>
-            </table>
-        </div>
-        <div class="hidden" id="open-interest">
-            <table class="min-w-full">
-                <thead class="bg-gray-50">
-                    <tr class="text-xs text-left text-gray-500 uppercase">
-                        <th data-sort="symbol">Coins &#x2195;</th>
-                        <th data-sort="openInterestPercent1m">OI % (1m) &#x2195;</th>
-                        <th data-sort="openInterestPercent5m">OI % (5m) &#x2195;</th>
-                        <th data-sort="openInterestPercent15m">OI % (15m) &#x2195;</th>
-                        <th data-sort="openInterestPercent1h">OI % (1h) &#x2195;</th>
-                        <th data-sort="openInterestPercent4h">OI % (4h) &#x2195;</th>
-                        <th data-sort="openInterestPercent12h">OI % (12h) &#x2195;</th>
-                        <th data-sort="openInterestPercent24h">OI % (24h) &#x2195;</th>
-                        <th data-sort="openInterestPercent48h">OI % (48h) &#x2195;</th>
-                    </tr>
-                </thead>
-                <tbody id="open-interest-table-body" class="divide-y divide-gray-200">
-                    <!-- Data will be inserted here by JavaScript -->
-                </tbody>
-            </table>
-        </div>
+            <div class="overflow-x-auto border border-gray-200">
+                <table class="min-w-full">
+                    <thead class="bg-gray-50">
+                        <tr id="table-headers" class="text-xs text-left text-gray-500 uppercase">
+                    <th data-sort="symbol" title="The cryptocurrency ticker symbol.">Coins &#x2195;</th>
+                    <th data-sort="price" data-tab="overview" title="The current price of the asset.">Price &#x2195;</th>
+                    <th data-sort="oi" data-tab="overview" title="The total open interest in USD.">OI &#x2195;</th>
+                    <th data-sort="oi24hNotional" data-tab="overview" title="The 24-hour notional value of open interest.">24h Notional &#x2195;</th>
+                    <th data-sort="volume24h" data-tab="overview" title="The 24-hour trading volume.">24h Volume &#x2195;</th>
+                    <th data-sort="marketCap" data-tab="overview" title="The market capitalization of the asset.">Market Cap &#x2195;</th>
+                    <th data-sort="aiScore" data-tab="overview" title="A score from our AI model that indicates the potential for a price move.">AI Score &#x2195;</th>
+                    <th data-sort="divergenceVector24h" data-tab="divergence" title="A vector indicating the direction and strength of divergence over the last 24 hours.">24h Div Vector &#x2195;<button class="filter-btn" data-column="divergenceVector24h">▼</button></th>
+                    <th data-sort="alphaDivergenceScore15m" data-tab="divergence" title="A score indicating the alpha divergence over the last 15 minutes.">Alpha Div (15m) &#x2195;</th>
+                    <th data-sort="divergenceVector4h" data-tab="divergence" title="A vector indicating the direction and strength of divergence over the last 4 hours.">Div Vector (4h) &#x2195;</th>
+                    <th data-sort="divergenceVector1h" data-tab="divergence" title="A vector indicating the direction and strength of divergence over the last 1 hour.">Div Vector (1h) &#x2195;</th>
+                    <th data-sort="divergenceVector15m" data-tab="divergence" title="A vector indicating the direction and strength of divergence over the last 15 minutes.">Div Vector (15m) &#x2195;</th>
+                    <th data-sort="divergenceVector5m" data-tab="divergence" title="A vector indicating the direction and strength of divergence over the last 5 minutes.">Div Vector (5m) &#x2195;</th>
+                    <th data-sort="oiConvictionScore" data-tab="notional" title="A score indicating the conviction of Open Interest.">OI Conviction &#x2195;</th>
+                    <th data-sort="lsConvictionScore" data-tab="position" title="A score indicating the conviction of Long/Short positions.">L/S Conviction &#x2195;</th>
+                    <th data-sort="divVectorConvictionScore" data-tab="divergence" title="A score indicating the conviction of the divergence vector.">Div Vector Conviction &#x2195;</th>
+                    <th data-sort="vwapDeviation15m" data-tab="overview" title="The deviation from the Volume Weighted Average Price over the last 15 minutes.">VWAP Dev (15m) &#x2195;</th>
+                    <th data-sort="vwapDeviation4h" data-tab="overview" title="The deviation from the Volume Weighted Average Price over the last 4 hours.">VWAP Dev (4h) &#x2195;</th>
+                    <th data-sort="vwapDeviation1d" data-tab="overview" title="The deviation from the Volume Weighted Average Price over the last day.">VWAP Dev (1d) &#x2195;</th>
+                    <th data-sort="lsTopPositionRatio" data-tab="position" title="The ratio of long to short positions of top traders.">L/S Top Position &#x2195;</th>
+                    <th data-sort="lsTopPositionRatioChange5m" data-tab="position" title="The change in the Long/Short top position ratio over the last 5 minutes.">L/S Top Pos Change (5m) &#x2195;</th>
+                    <th data-sort="lsTopPositionRatioChange15m" data-tab="position" title="The change in the Long/Short top position ratio over the last 15 minutes.">L/S Top Pos Change (15m) &#x2195;</th>
+                    <th data-sort="lsTopPositionRatioChange30m" data-tab="position" title="The change in the Long/Short top position ratio over the last 30 minutes.">L/S Top Pos Change (30m) &#x219-5;</th>
+                    <th data-sort="lsTopPositionRatioChange1h" data-tab="position" title="The change in the Long/Short top position ratio over the last 1 hour.">L/S Top Pos Change (1h) &#x2195;</th>
+                    <th data-sort="lsTopPositionRatioChange4h" data-tab="position" title="The change in the Long/Short top position ratio over the last 4 hours.">L/S Top Pos Change (4h) &#x2195;</th>
+                    <th data-sort="lsGlobalAccountRatio" data-tab="long-short-accounts" title="The ratio of long to short positions of all accounts.">L/S Global Acc. Ratio &#x2195;</th>
+                    <th data-sort="lsGlobalAccountRatioChange5m" data-tab="long-short-accounts" title="The change in the Long/Short global account ratio over the last 5 minutes.">L/S Acc. Change (5m) &#x2195;</th>
+                    <th data-sort="lsGlobalAccountRatioChange15m" data-tab="long-short-accounts" title="The change in the Long/Short global account ratio over the last 15 minutes.">L/S Acc. Change (15m) &#x2195;</th>
+                    <th data-sort="lsGlobalAccountRatioChange30m" data-tab="long-short-accounts" title="The change in the Long/Short global account ratio over the last 30 minutes.">L/S Acc. Change (30m) &#x2195;</th>
+                    <th data-sort="lsGlobalAccountRatioChange1h" data-tab="long-short-accounts" title="The change in the Long/Short global account ratio over the last 1 hour.">L/S Acc. Change (1h) &#x2195;</th>
+                    <th data-sort="lsGlobalAccountRatioChange4h" data-tab="long-short-accounts" title="The change in the Long/Short global account ratio over the last 4 hours.">L/S Acc. Change (4h) &#x2195;</th>
+                    <th data-sort="openInterestChange1m" data-tab="notional" title="The change in Open Interest over the last 1 minute.">OI Change (1m) &#x2195;</th>
+                    <th data-sort="openInterestChange5m" data-tab="notional" title="The change in Open Interest over the last 5 minutes.">OI Change (5m) &#x2195;</th>
+                    <th data-sort="openInterestChange15m" data-tab="notional" title="The change in Open Interest over the last 15 minutes.">OI Change (15m) &#x2195;</th>
+                    <th data-sort="openInterestChange1h" data-tab="notional" title="The change in Open Interest over the last 1 hour.">OI Change (1h) &#x2195;</th>
+                    <th data-sort="openInterestChange4h" data-tab="notional" title="The change in Open Interest over the last 4 hours.">OI Change (4h) &#x2195;</th>
+                    <th data-sort="openInterestChange12h" data-tab="notional" title="The change in Open Interest over the last 12 hours.">OI Change (12h) &#x2195;</th>
+                    <th data-sort="openInterestChange24h" data-tab="notional" title="The change in Open Interest over the last 24 hours.">OI Change (24h) &#x2195;</th>
+                    <th data-sort="openInterestChange48h" data-tab="notional" title="The change in Open Interest over the last 48 hours.">OI Change (48h) &#x2195;</th>
+                    <th data-sort="volumeChange5m" data-tab="volume" title="The change in volume over the last 5 minutes.">Vol (USD) Change (5m) &#x2195;</th>
+                    <th data-sort="volumeChange15m" data-tab="volume" title="The change in volume over the last 15 minutes.">Vol (USD) Change (15m) &#x2195;</th>
+                    <th data-sort="volumeChange1h" data-tab="volume" title="The change in volume over the last 1 hour.">Vol (USD) Change (1h) &#x2195;</th>
+                    <th data-sort="volumeChange4h" data-tab="volume" title="The change in volume over the last 4 hours.">Vol (USD) Change (4h) &#x2195;</th>
+                    <th data-sort="volumeChange12h" data-tab="volume" title="The change in volume over the last 12 hours.">Vol (USD) Change (12h) &#x2195;</th>
+                    <th data-sort="volumeChange24h" data-tab="volume" title="The change in volume over the last 24 hours.">Vol (USD) Change (24h) &#x2195;</th>
+                    <th data-sort="relativeStrength24h" data-tab="overview" title="The relative strength over the last 24 hours.">RS (24h) &#x2195;</th>
+                    <th data-sort="relativeStrength4h" data-tab="overview" title="The relative strength over the last 4 hours.">RS (4h) &#x2195;</th>
+                    <th data-sort="relativeStrength1h" data-tab="overview" title="The relative strength over the last 1 hour.">RS (1h) &#x2195;</th>
+                    <th data-sort="timestamp" data-tab="overview" title="The time of the last update.">Last Updated &#x2195;</th>
+                    <th data-sort="fundingRate" data-tab="funding-rate" title="The current funding rate.">Funding Rate (%) &#x2195;</th>
+                    <th data-sort="fundingRateChange1h" data-tab="funding-rate" title="The percentage change in the funding rate over the last 1 hour.">FR Change (1h) &#x2195;</th>
+                    <th data-sort="fundingRateChange4h" data-tab="funding-rate" title="The percentage change in the funding rate over the last 4 hours.">FR Change (4h) &#x2195;</th>
+                    <th data-sort="fundingRateChange24h" data-tab="funding-rate" title="The percentage change in the funding rate over the last 24 hours.">FR Change (24h) &#x2195;</th>
+                    <th data-sort="fundingRateSuggestion" data-tab="funding-rate" title="A suggestion based on the funding rate.">FR Suggestion &#x2195;</th>
+                    <th data-sort="oiWeightedFundingRate" data-tab="oi-weighted-funding-rate" title="The Open Interest-Weighted Funding Rate.">OI-Weighted FR &#x2195;</th>
+                    <th data-sort="oiWeightedContribution" data-tab="oi-weighted-funding-rate" title="The contribution of the asset to the total OI-Weighted Funding Rate.">OI-W FR Contrib. &#x2195;</th>
+                </tr>
+                    </thead>
+                    <tbody id="data-table-body" class="divide-y divide-gray-200">
+                        <!-- Data will be inserted here by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="hidden" id="open-interest">
+                <table class="min-w-full">
+                    <thead class="bg-gray-50">
+                        <tr id="open-interest-table-headers" class="text-xs text-left text-gray-500 uppercase">
+                            <th data-sort="symbol">Coins &#x2195;</th>
+                            <th data-sort="openInterestPercent1m">OI % (1m) &#x2195;</th>
+                            <th data-sort="openInterestPercent5m">OI % (5m) &#x2195;</th>
+                            <th data-sort="openInterestPercent15m">OI % (15m) &#x2195;</th>
+                            <th data-sort="openInterestPercent1h">OI % (1h) &#x2195;</th>
+                            <th data-sort="openInterestPercent4h">OI % (4h) &#x2195;</th>
+                            <th data-sort="openInterestPercent12h">OI % (12h) &#x2195;</th>
+                            <th data-sort="openInterestPercent24h">OI % (24h) &#x2195;</th>
+                            <th data-sort="openInterestPercent48h">OI % (48h) &#x2195;</th>
+                        </tr>
+                    </thead>
+                    <tbody id="open-interest-table-body" class="divide-y divide-gray-200">
+                        <!-- Data will be inserted here by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
     </div>
 
     <script src="js/main.js"></script>

@@ -14,6 +14,9 @@ const fs = require('fs');
 const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
 let isPaused = false;
 
+const cache = {};
+const CACHE_DURATION_SECONDS = 60;
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', (req, res) => {
@@ -38,6 +41,10 @@ app.get('/rs-indicators', (req, res) => {
 
 app.get('/funding-rate', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'funding-rate.html'));
+});
+
+app.get('/oi-weighted-funding-rate', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'oi-weighted-funding-rate.html'));
 });
 
 app.get('/api/logs', (req, res) => {
@@ -91,8 +98,6 @@ app.get('/api/bybit-leaderboard', async (req, res) => {
     }
 });
 
-
-
 const getBinanceData = async (symbol, endpoint, params = {}) => {
     if (isPaused) {
         return null;
@@ -106,9 +111,9 @@ const getBinanceData = async (symbol, endpoint, params = {}) => {
         return res.data;
     } catch (error) {
         if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
-            console.warn(`Request for ${symbol} on ${endpoint} timed out. Will retry next cycle.`);
+            console.warn(`Request for ${symbol ? symbol : 'all symbols'} on ${endpoint} timed out. Will retry next cycle.`);
         } else if (error.code === 'ECONNRESET' || error.code === 'EAI_AGAIN') {
-            console.warn(`Socket issue for ${symbol} on ${endpoint}. Will retry next cycle.`);
+            console.warn(`Socket issue for ${symbol ? symbol : 'all symbols'} on ${endpoint}. Will retry next cycle.`);
         } else if (error.response && (error.response.status === 418 || error.response.status === 403)) {
             const cooldownMinutes = config.ip_blacklist_cooldown_minutes || 10;
             console.warn(`IP address has been blocked by Binance API. Pausing requests for ${cooldownMinutes} minutes.`);
@@ -118,7 +123,7 @@ const getBinanceData = async (symbol, endpoint, params = {}) => {
                 console.log('Resuming API requests after cooldown.');
             }, cooldownMinutes * 60 * 1000);
         } else {
-            console.error(`Unhandled error for ${symbol} on ${endpoint}: ${error.message}`);
+            console.error(`Unhandled error for ${symbol ? symbol : 'all symbols'} on ${endpoint}: ${error.message}`, error);
         }
         return null;
     }
@@ -178,10 +183,16 @@ function calculateAiScore(oiChange, divChange, lsChange) {
     return Math.round(score * 100);
 }
 
-wss.on('connection', (ws) => {
-    console.log('Client connected');
+const broadcast = (data) => {
+    wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(data));
+        }
+    });
+};
+
+const startDataFetching = async () => {
     let isProcessing = false;
-    let timeoutId;
 
     const processSymbols = async () => {
         if (isProcessing) {
@@ -191,22 +202,20 @@ wss.on('connection', (ws) => {
         isProcessing = true;
 
         try {
-            let symbols = await getSymbolsWithRetry();
-            if (!symbols) {
-                if (ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ error: 'Could not fetch symbols after multiple retries. Please check server connection and restart.' }));
-                }
+            const allSymbols = await getSymbolsWithRetry();
+            if (!allSymbols) {
+                broadcast({ error: 'Could not fetch symbols after multiple retries. Please check server connection and restart.' });
                 isProcessing = false;
                 return;
             }
 
-            const delay = 60000 / symbols.length; // Stagger requests over one minute
+            const delay = 60000 / allSymbols.length; // Stagger requests over one minute
 
-            for (const symbol of symbols) {
+            for (const symbol of allSymbols) {
                 try {
                     const data = await fetchAllDataForSymbol(symbol);
-                    if (data && ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify(data));
+                    if (data) {
+                        broadcast(data);
                     }
                 } catch (error) {
                     console.error(`Failed to process symbol ${symbol}:`, error);
@@ -214,33 +223,33 @@ wss.on('connection', (ws) => {
                 await new Promise(res => setTimeout(res, delay));
             }
 
-            calculateWhaleSentiment(symbols);
+            calculateWhaleSentiment(allSymbols);
 
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    symbol: 'alpha7Signal',
-                    alpha7Signal: whaleSentiment === 'Bullish' ? 100 : (whaleSentiment === 'Bearish' ? -100 : 0)
-                }));
-            }
+            broadcast({
+                symbol: 'alpha7Signal',
+                alpha7Signal: whaleSentiment === 'Bullish' ? 100 : (whaleSentiment === 'Bearish' ? -100 : 0)
+            });
         } finally {
             isProcessing = false;
             console.log('Finished processing all symbols for this cycle.');
-            // Schedule the next run
-            if (ws.readyState === WebSocket.OPEN) {
-                timeoutId = setTimeout(processSymbols, 1000); // Start next cycle 1s after the previous one finishes
-            }
+            setTimeout(processSymbols, 1000); // Start next cycle 1s after the previous one finishes
         }
     };
 
     processSymbols();
+};
 
+startDataFetching();
+
+wss.on('connection', (ws) => {
+    console.log('Client connected');
     ws.on('close', () => {
         console.log('Client disconnected');
-        clearTimeout(timeoutId);
     });
 });
 
-const getSymbolsWithRetry = async (retries = 5, delay = 5000) => {
+const getSymbolsWithRetry = async (retries = 5, initialDelay = 5000) => {
+    let delay = initialDelay;
     for (let i = 0; i < retries; i++) {
         try {
             const endpoint = 'https://fapi.binance.com/fapi/v1/exchangeInfo';
@@ -252,7 +261,7 @@ const getSymbolsWithRetry = async (retries = 5, delay = 5000) => {
                     .map(s => s.symbol);
             }
         } catch (error) {
-            console.error(`Attempt ${i + 1} to fetch symbols failed.`, error);
+            console.error(`Attempt ${i + 1} to fetch symbols failed:`, error.message);
         }
         
         if (i < retries - 1) {
@@ -261,28 +270,25 @@ const getSymbolsWithRetry = async (retries = 5, delay = 5000) => {
             delay *= 2; // Exponential backoff
         }
     }
-    return null;
-};
-
-const getSymbols = async () => {
-    const endpoint = 'https://fapi.binance.com/fapi/v1/exchangeInfo';
-    const data = await getBinanceData(null, endpoint);
-    if (data && data.symbols) {
-        return data.symbols
-            .filter(s => s.status === 'TRADING' && s.symbol.endsWith('USDT'))
-            .map(s => s.symbol);
-    }
+    console.error('Could not fetch symbols after multiple retries.');
     return null;
 };
 
 const fetchAllDataForSymbol = async (symbol) => {
+    const now = Date.now();
+    if (cache[symbol] && (now - cache[symbol].timestamp) < CACHE_DURATION_SECONDS * 1000) {
+        console.log(`[CACHE HIT] Serving ${symbol} from cache.`);
+        return cache[symbol].data;
+    }
+
+    console.log(`[CACHE MISS] Fetching ${symbol} from API.`);
     const open_interest_endpoint = 'https://fapi.binance.com/fapi/v1/openInterest';
     const price_endpoint = 'https://fapi.binance.com/fapi/v1/ticker/price';
     const ls_top_position_endpoint = 'https://fapi.binance.com/futures/data/topLongShortPositionRatio';
     const ls_global_position_endpoint = 'https://fapi.binance.com/futures/data/globalLongShortAccountRatio';
     const oi_hist_endpoint = 'https://fapi.binance.com/futures/data/openInterestHist';
     const klines_endpoint = 'https://fapi.binance.com/fapi/v1/klines';
-    const funding_rate_endpoint = 'https://fapi.binance.com/fapi/v1/fundingRate';
+    const funding_rate_endpoint = 'https://fapi.binance.com/fapi/v1/premiumIndex';
     const funding_rate_hist_endpoint = 'https://fapi.binance.com/fapi/v1/fundingRate';
 
     const [
@@ -471,8 +477,16 @@ const fetchAllDataForSymbol = async (symbol) => {
         divergenceVector4h,
     });
 
-    const fundingRateValue = funding_rate_data && funding_rate_data[0] ? parseFloat(funding_rate_data[0].lastFundingRate) * 100 : null;
+    // The premiumIndex endpoint returns an object, not an array, for a single symbol.
+    const fundingRateObject = funding_rate_data;
+    const fundingRateValue = fundingRateObject ? parseFloat(fundingRateObject.lastFundingRate) * 100 : null;
+
     const data = {
+        price: price,
+        oi: openInterestInUSD,
+        oi24hNotional: (calculateOiChange(oi_hist_data_1h, 24) / 1000000).toFixed(2) + 'M',
+        volume24h: (calculateVolumeChange(klines_data_1d) / 1000000).toFixed(2) + 'M',
+        marketCap: 'N/A', // Market cap data is not available from this API
         symbol,
         aiScore,
         alphaDivergenceScore15m: alphaDivergenceScore15m ? alphaDivergenceScore15m.toFixed(4) : 'N/A',
@@ -518,10 +532,12 @@ const fetchAllDataForSymbol = async (symbol) => {
         volumeChange12h: (volumeChange12h / 1000000).toFixed(2) + 'M',
         volumeChange24h: (volumeChange24h / 1000000).toFixed(2) + 'M',
         fundingRate: fundingRateValue ? fundingRateValue.toFixed(4) : 'N/A',
+        fundingRateChange15m: calculateFundingRateVariation(funding_rate_hist_data, 0.25),
         fundingRateChange1h: calculateFundingRateVariation(funding_rate_hist_data, 1),
         fundingRateChange4h: calculateFundingRateVariation(funding_rate_hist_data, 4),
         fundingRateChange24h: calculateFundingRateVariation(funding_rate_hist_data, 24),
-        fundingRateSuggestion: getFundingRateSuggestion(funding_rate_data),
+        fundingRateChange48h: calculateFundingRateVariation(funding_rate_hist_data, 48),
+        fundingRateSuggestion: getFundingRateSuggestion(fundingRateObject),
         lsGlobalAccountRatio: ls_global_account_ratio_data && ls_global_account_ratio_data[0] ? parseFloat(ls_global_account_ratio_data[0].longShortRatio).toFixed(4) : 'N/A',
         lsGlobalAccountRatioChange5m,
         lsGlobalAccountRatioChange15m,
@@ -532,6 +548,11 @@ const fetchAllDataForSymbol = async (symbol) => {
 
     previousData[symbol] = {
         openInterest: openInterestInUSD
+    };
+
+    cache[symbol] = {
+        timestamp: Date.now(),
+        data: data
     };
 
     return data;

@@ -110,12 +110,12 @@ const fetchAllDataForSymbol = async (symbol) => {
         btc_klines_4h,
         btc_klines_1d
     ] = await Promise.all([
-        getBitgetData('candles', { symbol: symbol, granularity: '1h', limit: 200 }),
-        getBitgetData('candles', { symbol: symbol, granularity: '4h', limit: 200 }),
-        getBitgetData('candles', { symbol: symbol, granularity: '1d', limit: 200 }),
-        getBitgetData('candles', { symbol: 'BTCUSDT', granularity: '1h', limit: 2 }),
-        getBitgetData('candles', { symbol: 'BTCUSDT', granularity: '4h', limit: 2 }),
-        getBitgetData('candles', { symbol: 'BTCUSDT', granularity: '1d', limit: 2 })
+        getBitgetData('candles', { symbol: symbol, granularity: '1H', limit: 200 }),
+        getBitgetData('candles', { symbol: symbol, granularity: '4H', limit: 200 }),
+        getBitgetData('candles', { symbol: symbol, granularity: '1D', limit: 200 }),
+        getBitgetData('candles', { symbol: 'BTCUSDT', granularity: '1H', limit: 2 }),
+        getBitgetData('candles', { symbol: 'BTCUSDT', granularity: '4H', limit: 2 }),
+        getBitgetData('candles', { symbol: 'BTCUSDT', granularity: '1D', limit: 2 })
     ]);
 
     const sma20_1h = calculateMA(klines_data_1h ? klines_data_1h.data : null, 20);

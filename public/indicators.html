@@ -3,43 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Moving Average Indicators</title>
+    <title>Top Position Trader - Indicators</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body {
-            background-color: #FFFFFF;
-            color: #131722;
+    <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            // You can extend colors here if needed
+          }
+        }
+      }
+    }
+  </script>
+    <style type="text/tailwindcss">
+        @layer base {
+            body {
+                background-color: #FFFFFF;
+                color: #131722;
+                font-family: sans-serif;
+            }
+            thead th {
+                position: -webkit-sticky; /* for Safari */
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                background-color: #F1F5F9;
+                color: #64748B;
+            }
+            tbody tr:nth-child(even) {
+                background-color: #F9FAFB;
+            }
+            tbody tr:hover {
+                background-color: #F8FAFC;
+            }
+        }
+        .soon-badge {
+            font-size: 0.6rem;
+            padding: 0.1rem 0.3rem;
+            border-radius: 0.25rem;
+            background-color: #ef4444;
+            color: white;
+            margin-left: 0.4rem;
+            text-transform: uppercase;
+            font-weight: bold;
+            line-height: 1;
+        }
+        .nav-item-soon {
+            color: #9ca3af;
+            cursor: not-allowed;
         }
     </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/peity/3.3.0/jquery.peity.min.js"></script>
 </head>
 <body class="font-sans">
 
-    <div class="w-full p-4">
-        <header class="flex justify-between items-center mb-4">
-            <h1 class="text-2xl font-semibold text-gray-800">Moving Average Indicators</h1>
-            <a href="/" class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-500 transition">Back to Main Table</a>
+    <div class="w-full">
+        <!-- New Header -->
+        <header class="bg-white border-b border-gray-200">
+            <!-- Top Navigation Bar -->
+            <div class="flex items-center justify-between px-4 h-14">
+                <!-- Left: Logo & Main Menu -->
+                <div class="flex items-center space-x-6">
+                    <div class="flex items-center">
+                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                        <span class="ml-2 text-lg font-bold text-gray-800">TopTrader</span>
+                    </div>
+                     <nav class="hidden md:flex items-center space-x-5 text-sm font-medium">
+                        <a href="/" class="text-gray-600 hover:text-blue-600">Main Dashboard</a>
+                        <a href="#" class="nav-item-soon flex items-center">Ranking <span class="soon-badge">soon</span></a>
+                        <a href="#" class="nav-item-soon flex items-center">Fund Flow <span class="soon-badge">soon</span></a>
+                    </nav>
+                </div>
+
+                <!-- Right: Actions -->
+                <div class="flex items-center space-x-3">
+                    <button class="p-2 text-gray-600 rounded-full hover:bg-gray-100 transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                    </button>
+                    <button class="p-2 text-gray-600 rounded-full hover:bg-gray-100 transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    </button>
+                </div>
+            </div>
         </header>
 
-        <div class="flex items-center mb-4">
-            <input type="text" id="search-coin-input" placeholder="Search coin..." class="px-3 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <button id="search-coin-btn" class="ml-2 px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-500 transition">Search</button>
-        </div>
+        <!-- Main Content -->
+        <main class="p-4">
+            <div class="mb-4 border-b border-gray-200">
+                <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" id="myTab" data-tabs-toggle="#myTabContent" role="tablist">
+                    <li class="mr-2" role="presentation"><button class="inline-block p-4 border-b-2 rounded-t-lg" id="ma-tab" data-tabs-target="#ma" type="button" role="tab" aria-controls="ma" aria-selected="true">Moving Averages</button></li>
+                    <li class="mr-2" role="presentation"><button class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300" id="rs-tab" data-tabs-target="#rs" type="button" role="tab" aria-controls="rs" aria-selected="false">Relative Strength</button></li>
+                </ul>
+            </div>
 
-        <div class="overflow-x-auto border border-gray-200">
-            <table class="min-w-full">
-                <thead class="bg-gray-50">
-                    <tr class="text-xs text-left text-gray-500 uppercase">
-                        <th class="px-4 py-3">Coin</th>
-                        <th class="px-4 py-3">MA (15m)</th>
-                        <th class="px-4 py-3">MA (1h)</th>
-                        <th class="px-4 py-3">MA (4h)</th>
-                    </tr>
-                </thead>
-                <tbody id="indicators-table-body" class="divide-y divide-gray-200">
-                    <!-- Indicator rows will be inserted here by JavaScript -->
-                </tbody>
-            </table>
-        </div>
+            <div class="overflow-x-auto border border-gray-200">
+                <table class="min-w-full">
+                    <thead class="bg-gray-50">
+                        <tr id="table-headers" class="text-xs text-left text-gray-500 uppercase">
+                            <th data-sort="symbol" title="The cryptocurrency ticker symbol.">Coins &#x2195;</th>
+                            <th data-sort="sma20_1h" data-tab="ma" title="20-period Simple Moving Average on the 1-hour chart.">SMA20 (1h) &#x2195;</th>
+                            <th data-sort="sma50_1h" data-tab="ma" title="50-period Simple Moving Average on the 1-hour chart.">SMA50 (1h) &#x2195;</th>
+                            <th data-sort="sma200_1h" data-tab="ma" title="200-period Simple Moving Average on the 1-hour chart.">SMA200 (1h) &#x2195;</th>
+                            <th data-sort="sma20_4h" data-tab="ma" title="20-period Simple Moving Average on the 4-hour chart.">SMA20 (4h) &#x2195;</th>
+                            <th data-sort="sma50_4h" data-tab="ma" title="50-period Simple Moving Average on the 4-hour chart.">SMA50 (4h) &#x2195;</th>
+                            <th data-sort="sma200_4h" data-tab="ma" title="200-period Simple Moving Average on the 4-hour chart.">SMA200 (4h) &#x2195;</th>
+                            <th data-sort="sma20_1d" data-tab="ma" title="20-period Simple Moving Average on the 1-day chart.">SMA20 (1d) &#x2195;</th>
+                            <th data-sort="sma50_1d" data-tab="ma" title="50-period Simple Moving Average on the 1-day chart.">SMA50 (1d) &#x2195;</th>
+                            <th data-sort="sma200_1d" data-tab="ma" title="200-period Simple Moving Average on the 1-day chart.">SMA200 (1d) &#x2195;</th>
+                            <th data-sort="relativeStrength1h" data-tab="rs" title="Relative Strength vs. BTC on the 1-hour chart.">RS (1h) &#x2195;</th>
+                            <th data-sort="relativeStrength4h" data-tab="rs" title="Relative Strength vs. BTC on the 4-hour chart.">RS (4h) &#x2195;</th>
+                            <th data-sort="relativeStrength24h" data-tab="rs" title="Relative Strength vs. BTC on the 24-hour chart.">RS (24h) &#x2195;</th>
+                            <th data-sort="timestamp" data-tab="ma rs" title="The time of the last update.">Last Updated &#x2195;</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-table-body" class="divide-y divide-gray-200">
+                        <!-- Data will be inserted here by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
     </div>
 
     <script src="js/indicators.js"></script>

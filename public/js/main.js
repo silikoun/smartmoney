@@ -1,5 +1,7 @@
 const tableBody = document.getElementById('data-table-body');
-const socket = new WebSocket('ws://localhost:5019');
+const socketProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const socketHost = window.location.hostname === 'localhost' ? 'localhost:5019' : window.location.host;
+const socket = new WebSocket(`${socketProtocol}//${socketHost}`);
 const customizeBtn = document.getElementById('customize-btn');
 const customizePanel = document.getElementById('customize-panel');
 const customizeCheckboxes = document.getElementById('customize-checkboxes');
@@ -12,11 +14,14 @@ const exchangeDropdownPanel = document.getElementById('exchange-dropdown-panel')
 const selectedExchange = document.getElementById('selected-exchange');
 const moreActionsBtn = document.getElementById('more-actions-btn');
 const moreActionsPanel = document.getElementById('more-actions-panel');
+const marketTypeFuturesBtn = document.getElementById('market-type-futures');
+const marketTypeSpotBtn = document.getElementById('market-type-spot');
 
+let currentMarketType = 'futures';
 let tableData = [];
 let allData = [];
-let sortColumn = 'momentumIndex';
-let sortDirection = 'desc';
+let sortColumn = 'oi';
+let sortDirection = 'asc';
 let config = {
     divergence_ui_threshold_bullish: 0.05,
     divergence_ui_threshold_bearish: -0.05
@@ -33,8 +38,7 @@ function initialize() {
         });
     }
 
-    exchangeDropdownBtn.addEventListener('click', (event) => {
-        event.stopPropagation();
+    exchangeDropdownBtn.addEventListener('click', () => {
         exchangeDropdownPanel.classList.toggle('hidden');
     });
 
@@ -72,6 +76,7 @@ function initialize() {
 
     setupColumnCustomization();
     setupTabSwitching();
+    setupMarketTypeSwitching();
     renderTable(); // Initial render
 
     document.addEventListener('click', (event) => {
@@ -100,6 +105,30 @@ function setupTabSwitching() {
     showTab('overview'); // Show overview tab by default
 }
 
+function setupMarketTypeSwitching() {
+    marketTypeFuturesBtn.addEventListener('click', () => switchMarketType('futures'));
+    marketTypeSpotBtn.addEventListener('click', () => switchMarketType('spot'));
+}
+
+function switchMarketType(marketType) {
+    currentMarketType = marketType;
+    console.log(`Switched to ${marketType} market`);
+
+    if (marketType === 'futures') {
+        marketTypeFuturesBtn.classList.add('bg-gray-200', 'text-gray-800', 'font-semibold');
+        marketTypeFuturesBtn.classList.remove('bg-white', 'text-gray-500');
+        marketTypeSpotBtn.classList.add('bg-white', 'text-gray-500');
+        marketTypeSpotBtn.classList.remove('bg-gray-200', 'text-gray-800', 'font-semibold');
+    } else {
+        marketTypeSpotBtn.classList.add('bg-gray-200', 'text-gray-800', 'font-semibold');
+        marketTypeSpotBtn.classList.remove('bg-white', 'text-gray-500');
+        marketTypeFuturesBtn.classList.add('bg-white', 'text-gray-500');
+        marketTypeFuturesBtn.classList.remove('bg-gray-200', 'text-gray-800', 'font-semibold');
+    }
+    // Here you would typically trigger a data refresh
+    // e.g., fetchDataForMarket(currentMarketType);
+}
+
 function showTab(tabId) {
     const tabs = document.querySelectorAll('[data-tabs-target]');
     const openInterestTable = document.getElementById('open-interest-table-body').parentElement.parentElement;
@@ -125,7 +154,8 @@ function showTab(tabId) {
         mainTable.classList.remove('hidden');
         openInterestTable.classList.add('hidden');
     }
-
+    
+    populateCustomizeCheckboxes();
     renderTable();
 }
 
@@ -144,12 +174,12 @@ socket.onmessage = (event) => {
 
     if (data.symbol === 'alpha7Signal') {
         updateMarketSentiment('alpha7', data.alpha7Signal);
-        return; // Do not process this message further
     }
 
     const existingIndex = allData.findIndex(item => item.symbol === data.symbol);
     if (existingIndex > -1) {
-        allData[existingIndex] = data;
+        // Merge new data into the existing object to preserve calculated fields
+        Object.assign(allData[existingIndex], data);
     } else {
         allData.push(data);
     }
@@ -167,7 +197,9 @@ socket.onmessage = (event) => {
     if (data.symbol === 'BTCUSDT' || data.symbol === 'ETHUSDT') {
         updateMarketSentiment(data.symbol, data.alpha7Signal);
     }
-
+    
+    // Ensure OI-Weighted FR and Contribution are calculated for all data updates
+    calculateAndDisplayOIWeightedFR();
     renderTable();
 };
 
@@ -176,16 +208,42 @@ socket.onclose = () => {
 };
 
 // --- Column Customization ---
-
-function setupColumnCustomization() {
-    const savedColumns = JSON.parse(localStorage.getItem('visibleColumns'));
+function populateCustomizeCheckboxes() {
+    const activeTab = document.querySelector('[data-tabs-target][aria-selected="true"]').getAttribute('data-tabs-target').replace('#', '');
+    const savedColumns = JSON.parse(localStorage.getItem(`visibleColumns_${activeTab}`));
     const headers = Array.from(tableHeaders.children);
+
+    const defaultVisible = ['price', 'oi', 'oi24hNotional', 'volume24h', 'aiScore', 'symbol'];
     
+    // Clear existing checkboxes
+    document.getElementById('overview-columns').innerHTML = '';
+    document.getElementById('divergence-columns').innerHTML = '';
+    document.getElementById('notional-columns').innerHTML = '';
+    document.getElementById('volume-columns').innerHTML = '';
+    document.getElementById('position-columns').innerHTML = '';
+    document.getElementById('long-short-accounts-columns').innerHTML = '';
+    document.getElementById('funding-rate-columns').innerHTML = '';
+    // Clear the new container for oi-weighted-funding-rate
+    const oiWeightedFrContainer = document.getElementById('oi-weighted-funding-rate-columns');
+    if (oiWeightedFrContainer) {
+        oiWeightedFrContainer.innerHTML = '';
+    }
+
+
     headers.forEach(header => {
         const columnKey = header.dataset.sort;
+        const columnTab = header.dataset.tab;
         if (columnKey) {
             // Default to visible if no setting is saved
-            visibleColumns[columnKey] = savedColumns ? savedColumns[columnKey] !== false : true;
+            if (savedColumns) {
+                visibleColumns[columnKey] = savedColumns[columnKey] !== false;
+            } else {
+                if (activeTab === 'overview') {
+                    visibleColumns[columnKey] = defaultVisible.includes(columnKey);
+                } else {
+                    visibleColumns[columnKey] = true; // Default to visible for other tabs
+                }
+            }
 
             const label = document.createElement('label');
             label.className = 'flex items-center space-x-2 text-sm';
@@ -197,15 +255,24 @@ function setupColumnCustomization() {
             
             label.appendChild(checkbox);
             label.appendChild(document.createTextNode(header.textContent.replace('↕', '').trim()));
-            customizeCheckboxes.appendChild(label);
+            
+            const container = document.getElementById(`${columnTab}-columns`);
+            if(container) {
+                container.appendChild(label);
+            }
         }
     });
+}
+
+function setupColumnCustomization() {
+    populateCustomizeCheckboxes();
 
     customizeCheckboxes.addEventListener('change', (event) => {
         const checkbox = event.target;
         const columnKey = checkbox.dataset.column;
         visibleColumns[columnKey] = checkbox.checked;
-        localStorage.setItem('visibleColumns', JSON.stringify(visibleColumns));
+        const activeTab = document.querySelector('[data-tabs-target][aria-selected="true"]').getAttribute('data-tabs-target').replace('#', '');
+        localStorage.setItem(`visibleColumns_${activeTab}`, JSON.stringify(visibleColumns));
         renderTable();
     });
 
@@ -258,15 +325,19 @@ function updateHeaderVisibility(activeTab) {
     headers.forEach(header => {
         const columnKey = header.dataset.sort;
         const headerTab = header.dataset.tab;
+
         if (columnKey === 'symbol') {
             header.style.display = '';
             return;
         }
+
         if (columnKey) {
+            const isVisible = visibleColumns[columnKey];
+            
             if (activeTab === 'overview') {
-                header.style.display = visibleColumns[columnKey] ? '' : 'none';
+                header.style.display = isVisible ? '' : 'none';
             } else {
-                if (visibleColumns[columnKey] && headerTab === activeTab) {
+                if (isVisible && headerTab === activeTab) {
                     header.style.display = '';
                 } else {
                     header.style.display = 'none';
@@ -279,6 +350,11 @@ function updateHeaderVisibility(activeTab) {
 function buildRowHTML(data, activeTab) {
     const cellClasses = 'px-4 py-3 text-xs whitespace-nowrap';
     const cells = {
+        price: () => `<td class="${cellClasses}">${data.price}</td>`,
+        oi: () => `<td class="${cellClasses}">${(data.oi / 1000000).toFixed(2)}M</td>`,
+        oi24hNotional: () => `<td class="${cellClasses}">${data.oi24hNotional}</td>`,
+        volume24h: () => `<td class="${cellClasses}">${data.volume24h}</td>`,
+        marketCap: () => `<td class="${cellClasses}">${data.marketCap}</td>`,
         divergenceVector24h: () => `<td class="${cellClasses}">${formatDivergenceVectorCell(data.divergenceVector24h)}</td>`,
         aiScore: () => `<td class="${cellClasses} font-bold text-center">${data.aiScore || 'N/A'}</td>`,
         alphaDivergenceScore15m: () => `<td class="${cellClasses} font-bold">${formatDivergenceCell(data.alphaDivergenceScore15m)}</td>`,
@@ -335,35 +411,36 @@ function buildRowHTML(data, activeTab) {
         fundingRateChange1h: () => `<td class="${cellClasses}">${formatChangeCell(data.fundingRateChange1h, '%')}</td>`,
         fundingRateChange4h: () => `<td class="${cellClasses}">${formatChangeCell(data.fundingRateChange4h, '%')}</td>`,
         fundingRateChange24h: () => `<td class="${cellClasses}">${formatChangeCell(data.fundingRateChange24h, '%')}</td>`,
-        fundingRateSuggestion: () => `<td class="${cellClasses}"><div class="text-center px-2 py-0.5 text-xs font-bold rounded ${getSignalClass(data.fundingRateSuggestion)}">${data.fundingRateSuggestion}</div></td>`
+        fundingRateSuggestion: () => `<td class="${cellClasses}"><div class="text-center px-2 py-0.5 text-xs font-bold rounded ${getSignalClass(data.fundingRateSuggestion)}">${data.fundingRateSuggestion}</div></td>`,
+        oiWeightedFundingRate: () => `<td class="${cellClasses}">${formatChangeCell(data.oiWeightedFundingRate || data.fundingRate, '%')}</td>`,
+        oiWeightedContribution: () => `<td class="${cellClasses}">${data.oiWeightedContribution ? data.oiWeightedContribution.toFixed(4) + '%' : 'N/A'}</td>`
     };
 
     let html = '';
-    const headers = Array.from(tableHeaders.children);
-    html += cells['symbol']();
+    const mainHeaders = Array.from(document.getElementById('table-headers').children);
+    
+    // Always render the symbol first
+    html += cells['symbol'](data);
+
     if (activeTab === 'open-interest') {
-        const openInterestHeaders = document.querySelectorAll('#open-interest th');
+        const openInterestHeaders = Array.from(document.querySelectorAll('#open-interest th'));
         openInterestHeaders.forEach(header => {
             const key = header.dataset.sort;
-            if (cells[key] && key !== 'symbol') {
-                html += cells[key]();
+            if (cells[key] && key !== 'symbol') { // key !== 'symbol' is redundant now but safe
+                html += cells[key](data);
             }
         });
     } else {
-        headers.forEach(header => {
+        mainHeaders.forEach(header => {
             const key = header.dataset.sort;
+            if (key === 'symbol') return; // Skip symbol as it's already added
+
             const tab = header.dataset.tab;
-            if (key === 'symbol') {
-                return;
-            }
-            if (activeTab === 'overview') {
-                if (visibleColumns[key] && cells[key]) {
-                    html += cells[key]();
-                }
-            } else {
-                if (visibleColumns[key] && cells[key] && tab === activeTab) {
-                    html += cells[key]();
-                }
+            const isVisible = visibleColumns[key];
+            const belongsToTab = activeTab === 'overview' || tab === activeTab;
+
+            if (isVisible && belongsToTab && cells[key]) {
+                html += cells[key](data);
             }
         });
     }
@@ -466,7 +543,10 @@ function sortData() {
         let aValue = a[sortColumn];
         let bValue = b[sortColumn];
 
-        if (sortColumn === 'signalStrength') {
+        if (sortColumn.startsWith('openInterestPercent')) {
+            aValue = parseFloat(aValue);
+            bValue = parseFloat(bValue);
+        } else if (sortColumn === 'signalStrength') {
             aValue = signalStrengthMap[aValue] || 0;
             bValue = signalStrengthMap[bValue] || 0;
         } else {
@@ -482,7 +562,10 @@ function sortData() {
     });
 }
 
-document.getElementById('table-headers').addEventListener('click', (event) => {
+document.getElementById('table-headers').addEventListener('click', handleHeaderClick);
+document.getElementById('open-interest-table-headers').addEventListener('click', handleHeaderClick);
+
+function handleHeaderClick(event) {
     const header = event.target.closest('th');
     if (header && header.dataset.sort) {
         const newSortColumn = header.dataset.sort;
@@ -494,7 +577,7 @@ document.getElementById('table-headers').addEventListener('click', (event) => {
         }
         renderTable();
     }
-});
+}
 
 // --- CSV Export ---
 
@@ -587,6 +670,32 @@ function applyFilter(column, values) {
         tableData = allData.filter(item => values.includes(String(item[column])));
     }
     renderTable();
+}
+
+function calculateAndDisplayOIWeightedFR() {
+    let totalOI = 0;
+    let weightedSum = 0;
+
+    allData.forEach(item => {
+        const fundingRate = parseFloat(item.fundingRate);
+        const openInterest = parseFloat(item.oi);
+
+        if (!isNaN(fundingRate) && !isNaN(openInterest)) {
+            totalOI += openInterest;
+            weightedSum += fundingRate * openInterest;
+        }
+    });
+
+    // Calculate individual contributions
+    allData.forEach(item => {
+        const fundingRate = parseFloat(item.fundingRate);
+        const openInterest = parseFloat(item.oi);
+        if (!isNaN(fundingRate) && !isNaN(openInterest) && totalOI > 0) {
+            item.oiWeightedContribution = (fundingRate * openInterest / totalOI) * 100;
+        } else {
+            item.oiWeightedContribution = 0;
+        }
+    });
 }
 
 // --- Initial Load ---
