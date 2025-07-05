@@ -1,4 +1,6 @@
 runtime: nodejs20
+env: flex # Use the Flexible Environment for WebSocket support
+
 entrypoint: npm start
 
 network:
@@ -8,3 +10,8 @@ handlers:
 - url: /.*
   script: auto
   secure: always
+
+resources:
+  cpu: 1
+  memory_gb: 0.5
+  disk_size_gb: 10
