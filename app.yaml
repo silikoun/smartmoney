@@ -10,7 +10,6 @@ handlers:
 
 - url: /ws
   script: auto
-  instance_websocket_liveness_timeout: 600 # Optional: Increase timeout for WebSockets
 
 - url: /.*
   script: auto
