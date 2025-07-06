@@ -37,10 +37,29 @@ let config = {
     divergence_ui_threshold_bearish: -0.05
 };
 let visibleColumns = {};
+let skeletonLoader;
 
 // --- Initialization ---
 
 function initialize() {
+    skeletonLoader = document.getElementById('skeleton-loader');
+    const tableContainer = document.getElementById('table-container');
+    if (skeletonLoader && tableContainer) {
+        // Generate skeleton rows
+        let skeletonHTML = '';
+        for (let i = 0; i < 20; i++) {
+            skeletonHTML += `
+                <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                    <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded w-1/4 skeleton-loader"></div>
+                    <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded w-1/4 skeleton-loader"></div>
+                    <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded w-1/4 skeleton-loader"></div>
+                    <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded w-1/4 skeleton-loader"></div>
+                </div>
+            `;
+        }
+        skeletonLoader.innerHTML = skeletonHTML;
+    }
+
     const darkModeToggle = document.getElementById('dark-mode-toggle');
     const darkIcon = document.getElementById('theme-toggle-dark-icon');
     const lightIcon = document.getElementById('theme-toggle-light-icon');
@@ -79,6 +98,7 @@ function initialize() {
     if (window.PRELOADED_DATA && window.PRELOADED_DATA.length > 0) {
         allData = window.PRELOADED_DATA;
         tableData = [...allData];
+        if (skeletonLoader) skeletonLoader.style.display = 'none';
         renderTable();
     }
 
@@ -244,6 +264,9 @@ socket.onopen = () => {
 };
 
 socket.onmessage = (event) => {
+    if (skeletonLoader && skeletonLoader.style.display !== 'none') {
+        skeletonLoader.style.display = 'none';
+    }
     const data = JSON.parse(event.data);
     if (Array.isArray(data)) {
         data.forEach(item => {
@@ -392,12 +415,13 @@ function setupColumnCustomization() {
             visibleColumns[columnKey] = checkbox.checked;
             const activeTab = document.querySelector('[data-tabs-target][aria-selected="true"]').getAttribute('data-tabs-target').replace('#', '');
             localStorage.setItem(`visibleColumns_${activeTab}`, JSON.stringify(visibleColumns));
-            renderTable();
+            
             // Also update the desktop checkboxes
             const desktopCheckbox = document.querySelector(`#customize-checkboxes input[data-column="${columnKey}"]`);
             if (desktopCheckbox) {
                 desktopCheckbox.checked = checkbox.checked;
             }
+            renderTable();
         });
     }
 

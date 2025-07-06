@@ -69,6 +69,14 @@
             color: #9ca3af;
             cursor: not-allowed;
         }
+        @keyframes pulse {
+            50% {
+                opacity: .5;
+            }
+        }
+        .skeleton-loader {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
     </style>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/peity/3.3.0/jquery.peity.min.js"></script>
@@ -83,7 +91,17 @@
                 <!-- Left: Logo & Main Menu -->
                 <div class="flex items-center space-x-6">
                     <div class="flex items-center">
-                        <img src="logo.svg" alt="TopTrader Logo" class="h-12">
+                        <svg height="28" viewBox="0 0 250 40" xmlns="http://www.w3.org/2000/svg">
+                          <style>
+                            .serif {
+                              font-family: 'Times New Roman', 'Garamond', serif;
+                              font-weight: bold;
+                              font-size: 36px;
+                              letter-spacing: 1px;
+                            }
+                          </style>
+                          <text x="0" y="32" class="serif" fill="currentColor">TOPTRADER</text>
+                        </svg>
                     </div>
                     <nav class="hidden md:flex items-center space-x-5 text-sm font-medium">
                         <a href="#" class="nav-item-soon flex items-center">Ranking <span class="soon-badge">soon</span></a>
@@ -220,7 +238,10 @@
                 </ul>
             </div>
 
-            <div class="overflow-x-auto border border-gray-200 dark:border-gray-700">
+            <div id="table-container" class="overflow-x-auto border border-gray-200 dark:border-gray-700">
+                <div id="skeleton-loader">
+                    <!-- Skeleton rows will be inserted here by JavaScript -->
+                </div>
                 <table class="min-w-full">
                     <thead class="bg-gray-50 dark:bg-gray-700">
                         <tr id="table-headers" class="text-xs text-left text-gray-500 uppercase dark:text-gray-400">
