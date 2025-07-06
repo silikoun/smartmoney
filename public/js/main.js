@@ -76,7 +76,12 @@ function initialize() {
         }
     });
 
-    sessionStorage.removeItem('mainTableData');
+    if (window.PRELOADED_DATA && window.PRELOADED_DATA.length > 0) {
+        allData = window.PRELOADED_DATA;
+        tableData = [...allData];
+        renderTable();
+    }
+
     if (moreActionsBtn) {
         moreActionsBtn.addEventListener('click', (event) => {
             event.stopPropagation();
@@ -122,7 +127,7 @@ function initialize() {
         .catch(error => console.error('Error fetching config:', error));
 
     const cachedData = sessionStorage.getItem('mainTableData');
-    if (cachedData) {
+    if (cachedData && !allData.length) { // Only use session storage if preloaded data is not available
         allData = JSON.parse(cachedData);
         tableData = [...allData];
     }
@@ -297,7 +302,7 @@ function populateCustomizeCheckboxes() {
     const savedColumns = JSON.parse(localStorage.getItem(`visibleColumns_${activeTab}`));
     const headers = Array.from(tableHeaders.children);
 
-    const defaultVisible = ['price', 'oi', 'oi24hNotional', 'volume24h', 'aiScore', 'symbol'];
+    const defaultVisible = ['price', 'priceChange1h', 'priceChange24h', 'oi', 'oi24hNotional', 'volume24h', 'aiScore', 'symbol'];
     
     // Clear existing checkboxes
     document.getElementById('overview-columns').innerHTML = '';

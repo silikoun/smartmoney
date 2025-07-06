@@ -65,7 +65,21 @@ const CACHE_DURATION_SECONDS = 60; // How long to cache data for
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    const indexPath = path.join(__dirname, 'public', 'index.html');
+    fs.readFile(indexPath, 'utf8', (err, htmlData) => {
+        if (err) {
+            logger.error('Error reading index.html:', err);
+            return res.status(500).send('Error loading page');
+        }
+
+        const preloadedData = Object.values(cache).map(item => item.data);
+        const injectedHtml = htmlData.replace(
+            '</head>',
+            `<script>window.PRELOADED_DATA = ${JSON.stringify(preloadedData)};</script></head>`
+        );
+
+        res.send(injectedHtml);
+    });
 });
 
 app.get('/logs', (req, res) => {
